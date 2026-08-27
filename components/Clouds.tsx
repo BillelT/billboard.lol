@@ -4,12 +4,17 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { mulberry32, lerp } from "@/lib/rng";
 import { makeCloudGeometry } from "@/lib/geometry";
-import type { SceneLayout } from "@/lib/layout";
+import { BILL_Z, type SceneLayout } from "@/lib/layout";
 
 // Drifting clouds, denser over the giant billboards where the camera flies.
 // They cast the big soft ground shadows of the aerial section.
 export default function Clouds({ layout }: { layout: SceneLayout }) {
   const ref = useRef<THREE.InstancedMesh>(null);
+
+  const maxTop = useMemo(
+    () => layout.items.reduce((m, it) => Math.max(m, it.totalH), 0),
+    [layout.items],
+  );
 
   const { mesh, base } = useMemo(() => {
     const rng = mulberry32(99);
@@ -23,16 +28,25 @@ export default function Clouds({ layout }: { layout: SceneLayout }) {
     });
     const mesh = new THREE.InstancedMesh(makeCloudGeometry(), cloudMat, count);
     const span = layout.endX - layout.startX;
-    const base = Array.from({ length: count }, () => ({
-      x: lerp(layout.startX - 60, layout.startX + span * 0.85, Math.pow(rng(), 1.4)),
-      y: lerp(30, 72, rng()),
-      z: lerp(-90, 40, rng()),
-      s: lerp(2.2, 5.5, rng()),
-      speed: lerp(0.4, 1.1, rng()),
-    }));
+    // Clouds must never cross a billboard face: they either drift well behind
+    // the billboard line, or fly high enough to clear the tallest panel.
+    const CLEARANCE = 18;
+    const base = Array.from({ length: count }, () => {
+      const behind = rng() < 0.65;
+      const s = lerp(2.2, 5.5, rng());
+      const z = behind ? lerp(-260, BILL_Z - 45, rng()) : lerp(BILL_Z + 30, 60, rng());
+      const floor = behind ? 30 : maxTop + CLEARANCE + s * 1.4;
+      return {
+        x: lerp(layout.startX - 60, layout.startX + span * 0.85, Math.pow(rng(), 1.4)),
+        y: lerp(floor, floor + 34, rng()),
+        z,
+        s,
+        speed: lerp(0.4, 1.1, rng()),
+      };
+    });
     mesh.castShadow = true;
     return { mesh, base };
-  }, [layout.startX, layout.endX]);
+  }, [layout.startX, layout.endX, maxTop]);
 
   useEffect(
     () => () => {
