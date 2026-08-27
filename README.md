@@ -42,12 +42,40 @@ everyone starts from zero — the old cycle keeps its data as a hall of fame.
 ## Rendering notes
 
 - WebGL2 native MSAA, ACES filmic tone mapping, sRGB color management.
-- Gradient sky shader with in-shader dithering (no banding), fog matched to the
-  horizon color.
-- All props are merged vertex-colored geometries; scattered decor is instanced —
-  the whole scene stays under ~60 draw calls with zero texture downloads (ad
-  faces are generated `CanvasTexture`s).
+- Gradient sky shader with in-shader dithering (no banding); exponential fog in
+  the horizon color dissolves the far world with no hard band.
+- All props are merged vertex-colored geometries sharing one material; decor and
+  traffic are instanced. Zero downloaded assets — ad faces are generated
+  `CanvasTexture`s.
 - One soft-shadow map follows the camera; clouds cast the big aerial shadows.
 - Scroll is virtual: a damped progress value samples two Catmull-Rom curves
   (position + look-at) derived from the billboard layout, so the framing adapts
   to whatever the ranking looks like.
+
+### Scaling to a long ranking
+
+The scene is built so cost depends on the *view*, not on how many companies are
+in the ranking:
+
+- **Decor is generated per cell around the camera**, not once across the whole
+  road. Instance counts are constant, density never thins out, and positions are
+  a pure function of the cell index — scrolling back shows the same trees.
+- **Billboard faces are painted only within range of the camera** and released
+  beyond it, so live canvases track what is on screen.
+- Billboard size comes from rank, not amount, so the road stays legible however
+  long it gets.
+
+Measured with `?perf=1` (draw calls / triangles are renderer counters):
+
+| ranking | draw calls | triangles | uploaded textures |
+| --- | --- | --- | --- |
+| 12 billboards | 19 | ~52k | 3–11 |
+| 200 billboards | 19–20 | ~64k | 3–13 |
+
+Initial JS is 108 kB (the three.js scene is a lazy chunk, and supabase-js is only
+downloaded when Supabase is configured).
+
+### Dev tools
+
+- `?perf=1` — live fps / draw calls / triangles / textures / DPR overlay.
+- `?stress=200` — fill the ranking with N synthetic companies.

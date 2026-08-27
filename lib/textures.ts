@@ -28,104 +28,107 @@ function shade(hex: string, f: number): string {
   return `#${c.getHexString()}`;
 }
 
+// The camera descends to match each billboard, so every panel fills a similar
+// slice of the screen when you reach it: they all need the same resolution.
+// Memory is kept flat by how few are painted at once (see TEXTURE_RANGE), not by
+// shrinking the canvas.
+export const FACE_RES = 1024;
+
 export function makeFaceTexture(opts: {
   name: string;
   color: string;
   amount: number;
   rank: number;
+  res: number;
 }): THREE.CanvasTexture {
-  const key = `${opts.name}|${opts.color}|${opts.amount}|${opts.rank}`;
-  const hit = cache.get(key);
-  if (hit) return hit;
-
-  const W = 1024;
-  const H = 544;
+  const W = opts.res;
+  const H = Math.round(W * 0.53);
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
+  // draw in a fixed 1024-wide design space whatever the real resolution is
+  const LW = 1024;
+  const LH = LW * 0.53;
+  ctx.scale(W / LW, H / LH);
   const family = uiFont();
   const font = (w: number, s: number) => `${w} ${s}px ${family}`;
 
   // background: subtle vertical ramp of the brand color + faint tile grid
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  const bg = ctx.createLinearGradient(0, 0, 0, LH);
   bg.addColorStop(0, shade(opts.color, 0.06));
   bg.addColorStop(1, shade(opts.color, -0.05));
   ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0, 0, LW, LH);
   ctx.strokeStyle = "rgba(255,255,255,0.07)";
   ctx.lineWidth = 3;
-  for (let x = 128; x < W; x += 128) {
+  for (let x = 128; x < LW; x += 128) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
-    ctx.lineTo(x, H);
+    ctx.lineTo(x, LH);
     ctx.stroke();
   }
-  for (let y = 136; y < H; y += 136) {
+  for (let y = 136; y < LH; y += 136) {
     ctx.beginPath();
     ctx.moveTo(0, y);
-    ctx.lineTo(W, y);
+    ctx.lineTo(LW, y);
     ctx.stroke();
   }
-  // inner border
   ctx.strokeStyle = "rgba(255,255,255,0.35)";
   ctx.lineWidth = 8;
-  ctx.strokeRect(18, 18, W - 36, H - 36);
+  ctx.strokeRect(18, 18, LW - 36, LH - 36);
 
   // monogram tile
   const tile = 176;
   const tx = 72;
-  const ty = H / 2 - tile / 2;
+  const ty = LH / 2 - tile / 2;
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.roundRect(tx, ty, tile, tile, 40);
   ctx.fill();
   ctx.fillStyle = opts.color;
-  ctx.font = font(800, 110);
+  ctx.font = font(700, 110);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(opts.name.charAt(0).toUpperCase(), tx + tile / 2, ty + tile / 2 + 8);
 
   // domain name, auto-fit
   const nameX = tx + tile + 48;
-  const nameMaxW = W - nameX - 380;
+  const nameMaxW = LW - nameX - 380;
   let size = 96;
-  ctx.font = font(800, size);
+  ctx.font = font(700, size);
   while (size > 34 && ctx.measureText(opts.name).width > nameMaxW) {
     size -= 4;
-    ctx.font = font(800, size);
+    ctx.font = font(700, size);
   }
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "left";
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 4;
-  ctx.fillText(opts.name, nameX, H / 2 - 26);
+  ctx.fillText(opts.name, nameX, LH / 2 - 26);
   ctx.shadowColor = "transparent";
-  ctx.font = font(600, 36);
+  ctx.font = font(400, 36);
   if (ctx.measureText("your ad, but bigger").width <= nameMaxW) {
     ctx.fillStyle = "rgba(255,255,255,0.7)";
-    ctx.fillText("your ad, but bigger", nameX, H / 2 + 50);
+    ctx.fillText("your ad, but bigger", nameX, LH / 2 + 50);
   }
 
   // rank + amount on the right
   ctx.textAlign = "right";
   ctx.fillStyle = "#ffffff";
-  ctx.font = font(900, 120);
+  ctx.font = font(700, 120);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowOffsetY = 5;
-  ctx.fillText(`#${opts.rank}`, W - 64, H / 2 - 40);
-  ctx.font = font(800, 84);
-  ctx.fillText(fmtUSD(opts.amount), W - 64, H / 2 + 78);
+  ctx.fillText(`#${opts.rank}`, LW - 64, LH / 2 - 40);
+  ctx.font = font(700, 84);
+  ctx.fillText(fmtUSD(opts.amount), LW - 64, LH / 2 + 78);
   ctx.shadowColor = "transparent";
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
-  tex.generateMipmaps = true;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
-
-  trackTexture(key, tex);
   return tex;
 }
 
