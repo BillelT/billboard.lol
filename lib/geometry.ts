@@ -77,16 +77,18 @@ function jitterFacets(geo: THREE.BufferGeometry, amp: number) {
   return geo;
 }
 
+// Segment counts are kept low on purpose: these are instanced hundreds of times,
+// and smooth vertex normals keep the shading soft even on a coarse silhouette.
 export function makeTreeGeometry(kind: "round" | "tall"): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
   if (kind === "round") {
-    parts.push(paint(place(new THREE.CylinderGeometry(0.16, 0.26, 1.6, 7), 0, 0.8, 0), PAL.trunk));
-    parts.push(paint(place(new THREE.SphereGeometry(1.15, 12, 9), 0, 2.15, 0, 1, 1.05, 1), PAL.foliage));
-    parts.push(paint(place(new THREE.SphereGeometry(0.62, 10, 8), 0.62, 2.6, 0.18), PAL.foliageLight));
+    parts.push(paint(place(new THREE.CylinderGeometry(0.16, 0.26, 1.6, 6), 0, 0.8, 0), PAL.trunk));
+    parts.push(paint(place(new THREE.SphereGeometry(1.15, 9, 7), 0, 2.15, 0, 1, 1.05, 1), PAL.foliage));
+    parts.push(paint(place(new THREE.SphereGeometry(0.62, 7, 5), 0.62, 2.6, 0.18), PAL.foliageLight));
   } else {
-    parts.push(paint(place(new THREE.CylinderGeometry(0.13, 0.22, 2.3, 7), 0, 1.15, 0), PAL.trunk));
-    parts.push(paint(place(new THREE.SphereGeometry(0.95, 11, 8), 0, 2.7, 0, 1, 1.15, 1), PAL.foliage));
-    parts.push(paint(place(new THREE.SphereGeometry(0.7, 10, 8), 0, 3.7, 0), PAL.foliageLight));
+    parts.push(paint(place(new THREE.CylinderGeometry(0.13, 0.22, 2.3, 6), 0, 1.15, 0), PAL.trunk));
+    parts.push(paint(place(new THREE.SphereGeometry(0.95, 9, 6), 0, 2.7, 0, 1, 1.15, 1), PAL.foliage));
+    parts.push(paint(place(new THREE.SphereGeometry(0.7, 7, 5), 0, 3.7, 0), PAL.foliageLight));
   }
   const merged = mergeGeometries(parts, false)!;
   parts.forEach((p) => p.dispose());
@@ -102,7 +104,7 @@ export function makeRockGeometry(): THREE.BufferGeometry {
 }
 
 export function makeBushGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.SphereGeometry(0.55, 9, 7);
+  const geo = new THREE.SphereGeometry(0.55, 7, 5);
   geo.scale(1.15, 0.75, 1);
   geo.translate(0, 0.4, 0);
   return paint(geo, PAL.bush);
@@ -174,9 +176,11 @@ export function makeTailRotorGeometry(): THREE.BufferGeometry {
   return merged;
 }
 
-export function makeCarGeometry(color: string): THREE.BufferGeometry {
+// Body left white so per-instance colour can tint it; glass and tyres stay dark
+// through that multiply.
+export function makeCarGeometry(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  parts.push(paint(place(box(2.5, 0.62, 1.18), 0, 0.66, 0), color));
+  parts.push(paint(place(box(2.5, 0.62, 1.18), 0, 0.66, 0), "#ffffff"));
   parts.push(paint(place(box(1.35, 0.55, 1.04), -0.12, 1.2, 0), PAL.window));
   const wheel = () => {
     const g = new THREE.CylinderGeometry(0.3, 0.3, 0.24, 8);

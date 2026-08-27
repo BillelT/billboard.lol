@@ -3,13 +3,21 @@ import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { makeBillboardGeometry } from "@/lib/geometry";
-import { makeFaceTexture } from "@/lib/textures";
+import { FACE_RES, makeFaceTexture } from "@/lib/textures";
 import { BILL_Z, type LayoutItem, type SceneLayout } from "@/lib/layout";
 import { vertexColorMat } from "./materials";
 
+// How far ahead/behind the camera a billboard keeps a painted face. Beyond it
+// the panel falls back to flat brand colour and its canvas is released, so the
+// number of live textures depends on the view, not on the size of the ranking.
+// Scaled by the panel's own size because the camera rides closer to small ones.
+const textureRange = (panelW: number) => Math.max(150, panelW * 9);
+
 function BillboardItem({ item }: { item: LayoutItem }) {
   const group = useRef<THREE.Group>(null);
+  const face = useRef<THREE.MeshBasicMaterial>(null);
   const spawned = useRef(false);
+  const painted = useRef<{ key: string; tex: THREE.CanvasTexture } | null>(null);
 
   const geometry = useMemo(
     () => makeBillboardGeometry(item.panelW, item.panelH, item.poleH),
@@ -17,17 +25,22 @@ function BillboardItem({ item }: { item: LayoutItem }) {
   );
   useEffect(() => () => geometry.dispose(), [geometry]);
 
-  const texture = useMemo(
-    () => makeFaceTexture({ name: item.name, color: item.color, amount: item.amount, rank: item.rank }),
-    [item.name, item.color, item.amount, item.rank],
+  const texKey = `${item.name}|${item.color}|${item.amount}|${item.rank}`;
+  useEffect(
+    () => () => {
+      painted.current?.tex.dispose();
+      painted.current = null;
+    },
+    [],
   );
 
   const tk = THREE.MathUtils.clamp(item.panelH * 0.07, 0.2, 1.3);
 
-  // Rank changes glide the billboard to its new spot; new billboards pop in.
-  useFrame((_, dt) => {
+  useFrame(({ camera }, dt) => {
     const g = group.current;
     if (!g) return;
+
+    // rank changes glide the billboard to its new spot; new ones pop in
     if (!spawned.current) {
       g.position.x = item.x;
       g.scale.setScalar(0.001);
@@ -35,6 +48,31 @@ function BillboardItem({ item }: { item: LayoutItem }) {
     }
     g.position.x = THREE.MathUtils.damp(g.position.x, item.x, 2.5, dt);
     g.scale.setScalar(THREE.MathUtils.damp(g.scale.x, 1, 3.2, dt));
+
+    const mat = face.current;
+    if (!mat) return;
+    const near = Math.abs(camera.position.x - item.x) < textureRange(item.panelW);
+
+    if (near && painted.current?.key !== texKey) {
+      painted.current?.tex.dispose();
+      const tex = makeFaceTexture({
+        name: item.name,
+        color: item.color,
+        amount: item.amount,
+        rank: item.rank,
+        res: FACE_RES,
+      });
+      painted.current = { key: texKey, tex };
+      mat.map = tex;
+      mat.color.set("#ffffff");
+      mat.needsUpdate = true;
+    } else if (!near && painted.current) {
+      painted.current.tex.dispose();
+      painted.current = null;
+      mat.map = null;
+      mat.color.set(item.color);
+      mat.needsUpdate = true;
+    }
   });
 
   return (
@@ -42,7 +80,7 @@ function BillboardItem({ item }: { item: LayoutItem }) {
       <mesh geometry={geometry} material={vertexColorMat} castShadow receiveShadow />
       <mesh position={[0, item.poleH + item.panelH / 2, tk / 2 + 0.03]}>
         <planeGeometry args={[item.panelW * 0.96, item.panelH * 0.92]} />
-        <meshBasicMaterial map={texture} />
+        <meshBasicMaterial ref={face} color={item.color} />
       </mesh>
     </group>
   );

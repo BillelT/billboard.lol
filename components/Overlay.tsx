@@ -4,6 +4,8 @@ import { useStore } from "@/lib/store";
 import { computeLayout, fmtUSD } from "@/lib/layout";
 import { brandColorFor } from "@/lib/palette";
 import { scrollState } from "@/lib/scrollState";
+import { perfEnabled } from "@/lib/perfState";
+import PerfPanel from "./PerfPanel";
 
 const STEPS = [1, 2, 5, 10, 20, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
 
@@ -19,6 +21,8 @@ export default function Overlay() {
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [perf, setPerf] = useState(false);
+  useEffect(() => setPerf(perfEnabled()), []);
 
   // scroll + pointer → mutable state read by the camera rig every frame
   useEffect(() => {
@@ -75,7 +79,9 @@ export default function Overlay() {
     }
   };
 
-  const pages = Math.max(6, layout.items.length * 0.9);
+  // scroll length grows with the ranking but sub-linearly, so 200 billboards
+  // stay a long drive rather than an endless one
+  const pages = Math.min(60, 6 + layout.items.length * 0.55);
 
   return (
     <>
@@ -130,6 +136,7 @@ export default function Overlay() {
       </aside>
 
       <div className={`hint ${scrolled ? "off" : ""}`}>scroll to drive past the ranking ↓</div>
+      {perf && <PerfPanel />}
     </>
   );
 }

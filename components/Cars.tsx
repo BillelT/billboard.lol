@@ -7,43 +7,47 @@ import { PAL } from "@/lib/palette";
 import type { SceneLayout } from "@/lib/layout";
 import { vertexColorMat } from "./materials";
 
-// A few cars looping down each lane.
+// Traffic in one InstancedMesh: per-car paint comes from instanceColor, which
+// multiplies the white body while leaving the dark glass and tyres dark.
 export default function Cars({ layout }: { layout: SceneLayout }) {
-  const group = useMemo(() => {
-    const g = new THREE.Group();
-    PAL.carColors.forEach((color, i) => {
-      const mesh = new THREE.Mesh(makeCarGeometry(color), vertexColorMat);
-      mesh.castShadow = true;
+  const { mesh, lanes } = useMemo(() => {
+    const count = PAL.carColors.length;
+    const mesh = new THREE.InstancedMesh(makeCarGeometry(), vertexColorMat, count);
+    mesh.castShadow = true;
+    mesh.frustumCulled = false;
+    const color = new THREE.Color();
+    const lanes = PAL.carColors.map((hex, i) => {
+      mesh.setColorAt(i, color.set(hex));
       const eastbound = i % 2 === 0;
-      mesh.userData = {
-        speed: 13 + (i % 3) * 3.5,
-        offset: i * 137.7,
-        dir: eastbound ? 1 : -1,
-      };
-      mesh.position.z = eastbound ? -2.2 : 2.2;
-      mesh.rotation.y = eastbound ? 0 : Math.PI;
-      g.add(mesh);
+      return { speed: 13 + (i % 3) * 3.5, offset: i * 137.7, dir: eastbound ? 1 : -1 };
     });
-    return g;
+    return { mesh, lanes };
   }, []);
 
   useEffect(
     () => () => {
-      group.children.forEach((c) => (c as THREE.Mesh).geometry.dispose());
+      mesh.geometry.dispose();
+      mesh.dispose();
     },
-    [group],
+    [mesh],
   );
+
+  const dummy = useMemo(() => new THREE.Object3D(), []);
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     const start = layout.startX - 120;
     const span = layout.endX + 120 - start;
-    for (const car of group.children) {
-      const { speed, offset, dir } = car.userData as { speed: number; offset: number; dir: number };
+    for (let i = 0; i < lanes.length; i++) {
+      const { speed, offset, dir } = lanes[i];
       const d = (speed * t + offset) % span;
-      car.position.x = dir > 0 ? start + d : start + span - d;
+      dummy.position.set(dir > 0 ? start + d : start + span - d, 0, dir > 0 ? -2.2 : 2.2);
+      dummy.rotation.set(0, dir > 0 ? 0 : Math.PI, 0);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
     }
+    mesh.instanceMatrix.needsUpdate = true;
   });
 
-  return <primitive object={group} />;
+  return <primitive object={mesh} />;
 }
