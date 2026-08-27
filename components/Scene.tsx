@@ -13,6 +13,7 @@ import Billboards from "./Billboards";
 import Decor from "./Decor";
 import Clouds from "./Clouds";
 import Cars from "./Cars";
+import Helicopter from "./Helicopter";
 import CameraRig from "./CameraRig";
 
 export default function Scene() {
@@ -39,6 +40,7 @@ export default function Scene() {
       <Decor layout={layout} />
       <Clouds layout={layout} />
       <Cars layout={layout} />
+      <Helicopter layout={layout} />
       <CameraRig layout={layout} />
     </Canvas>
   );
