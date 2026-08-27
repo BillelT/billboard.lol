@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, supabaseConfigured } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
 import type { Billboard } from "@/lib/types";
 
@@ -10,36 +10,52 @@ export default function DataSync() {
   const setBillboards = useStore((s) => s.setBillboards);
 
   useEffect(() => {
-    const supabase = getSupabase();
-    if (!supabase) return;
+    const stress = Number(new URLSearchParams(window.location.search).get("stress"));
+    if (Number.isFinite(stress) && stress > 0) {
+      import("@/lib/seed").then(({ makeStressRanking }) =>
+        setBillboards(makeStressRanking(Math.min(stress, 1000))),
+      );
+      return;
+    }
+    if (!supabaseConfigured()) return;
 
-    const fetchRanking = async () => {
-      const { data, error } = await supabase
-        .from("current_ranking")
-        .select("id,name,url,color,total_amount")
-        .order("total_amount", { ascending: false });
-      if (!error && data) {
-        setBillboards(
-          data.map(
-            (r): Billboard => ({
-              id: String(r.id),
-              name: r.name,
-              url: r.url,
-              color: r.color,
-              amount: Number(r.total_amount),
-            }),
-          ),
-        );
-      }
-    };
+    let channel: { unsubscribe: () => void } | null = null;
+    let cancelled = false;
 
-    fetchRanking();
-    const channel = supabase
-      .channel("payments")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "payments" }, fetchRanking)
-      .subscribe();
+    (async () => {
+      const supabase = await getSupabase();
+      if (!supabase || cancelled) return;
+
+      const fetchRanking = async () => {
+        const { data, error } = await supabase
+          .from("current_ranking")
+          .select("id,name,url,color,total_amount")
+          .order("total_amount", { ascending: false });
+        if (!error && data) {
+          setBillboards(
+            data.map(
+              (r): Billboard => ({
+                id: String(r.id),
+                name: r.name,
+                url: r.url,
+                color: r.color,
+                amount: Number(r.total_amount),
+              }),
+            ),
+          );
+        }
+      };
+
+      await fetchRanking();
+      channel = supabase
+        .channel("payments")
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "payments" }, fetchRanking)
+        .subscribe();
+    })();
+
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      channel?.unsubscribe();
     };
   }, [setBillboards]);
 

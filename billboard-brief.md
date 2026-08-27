@@ -14,6 +14,7 @@ Alternatives de nom : BiggerIsBetter.lol, MoreIsMore.lol
 - **Ranking par montant cumulé.** Chaque entreprise a un total payé ; le classement est le tri décroissant de ces totaux. Rang 1 = premier billboard rencontré, le plus gros.
 - **Pas d'enchère perdante.** Ce n'est pas une enchère classique : chaque paiement s'**ajoute** au total de l'entreprise (pas de remboursement, pas d'expiration d'offre). Se faire dépasser = raison de repayer. C'est le moteur viral du modèle outbid.
 - **Ticket d'entrée bas** (ex. 1 $) pour maximiser le nombre de panneaux sur la route ; pas de montant max.
+- **Taille calculée à l'envers, depuis le bas du classement.** Le dernier rang a une taille plancher lisible et chaque rang au-dessus grandit à partir de là (courbe puissance 2.4 : le spectaculaire reste en haut sans écraser la queue). La taille suit donc la **position au classement**, pas le montant brut — c'est ce qui permet d'aller jusqu'à 200 billboards sans finir sur un timbre-poste.
 - **Effet immédiat.** Un paiement re-trie le ranking en temps réel : le billboard grossit et remonte la route sous les yeux des visiteurs (transition animée, pas de reload).
 - **Le rang 1 est un trophée.** Il ouvre la scène, occupe tout le cadre au chargement, et alimente l'OG image / le title du site ("Currently #1: {company}").
 - **Reset périodique** (daily/weekly, à trancher) prévu dès le départ dans le schéma de données : chaque cycle archive son podium dans un hall of fame, et tout le monde repart de zéro — récurrence des revenus.

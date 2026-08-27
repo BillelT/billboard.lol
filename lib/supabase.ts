@@ -1,13 +1,24 @@
 "use client";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 let client: SupabaseClient | null | undefined;
 
-// Returns null when Supabase isn't configured → the app stays in demo mode.
-export function getSupabase(): SupabaseClient | null {
+export function supabaseConfigured(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
+// Loaded on demand so supabase-js (and its realtime client) stays out of the
+// initial bundle: in demo mode it is never downloaded at all.
+export async function getSupabase(): Promise<SupabaseClient | null> {
   if (client !== undefined) return client;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  client = url && key ? createClient(url, key) : null;
+  if (!supabaseConfigured()) {
+    client = null;
+    return client;
+  }
+  const { createClient } = await import("@supabase/supabase-js");
+  client = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
   return client;
 }
