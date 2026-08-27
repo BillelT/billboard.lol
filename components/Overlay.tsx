@@ -1,12 +1,17 @@
 "use client";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { computeLayout, fmtFeet, fmtUSD } from "@/lib/layout";
 import { brandColorFor } from "@/lib/palette";
 import { scrollState } from "@/lib/scrollState";
 import { usePresence } from "@/lib/usePresence";
+import { sceneAudio } from "@/lib/audio";
 import { perfEnabled } from "@/lib/perfState";
+import { debugEnabled } from "@/lib/debugState";
 import PerfPanel from "./PerfPanel";
+
+const DebugPanel = dynamic(() => import("./DebugPanel"), { ssr: false });
 
 const CATEGORIES = [
   "AI & Infrastructure",
@@ -40,6 +45,7 @@ export default function Overlay() {
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [sound, setSound] = useState(false);
   const dockRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLDivElement>(null);
 
@@ -57,7 +63,11 @@ export default function Overlay() {
   }, []);
 
   const [perf, setPerf] = useState(false);
-  useEffect(() => setPerf(perfEnabled()), []);
+  const [debug, setDebug] = useState(false);
+  useEffect(() => {
+    setPerf(perfEnabled());
+    setDebug(debugEnabled());
+  }, []);
 
   // scroll + pointer → mutable state read by the camera rig every frame
   useEffect(() => {
@@ -76,6 +86,17 @@ export default function Overlay() {
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("pointermove", onPointer);
+    };
+  }, []);
+
+  // the sound engine can only start from a gesture, so mirror its state here
+  useEffect(() => {
+    const off = sceneAudio.subscribe(setSound);
+    const disarm = sceneAudio.armFromPreference();
+    setSound(sceneAudio.enabled);
+    return () => {
+      off();
+      disarm();
     };
   }, []);
 
@@ -159,6 +180,15 @@ export default function Overlay() {
           <span className="gauge__key">sales</span>
           <b>{fmtUSD(totalBurned)}</b> made
         </div>
+        <button
+          className="gauge gauge--sound"
+          onClick={() => sceneAudio.toggle()}
+          aria-pressed={sound}
+          title={sound ? "Mute the highway" : "Hear the highway"}
+        >
+          <span className="gauge__key">sound</span>
+          <b>{sound ? "🔊 on" : "🔇 off"}</b>
+        </button>
         <a
           className="gauge gauge--sig"
           href="https://x.com/billel_tighidet"
@@ -276,6 +306,7 @@ export default function Overlay() {
       </div>
 
       {perf && <PerfPanel />}
+      {debug && <DebugPanel />}
     </>
   );
 }

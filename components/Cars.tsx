@@ -6,6 +6,7 @@ import { makeCarGeometry } from "@/lib/geometry";
 import { PAL } from "@/lib/palette";
 import type { SceneLayout } from "@/lib/layout";
 import { vertexColorMat } from "./materials";
+import { placementOf, sceneAudio } from "@/lib/audio";
 
 // Traffic in one InstancedMesh: per-car paint comes from instanceColor, which
 // multiplies the white body while leaving the dark glass and tyres dark.
@@ -34,7 +35,12 @@ export default function Cars({ layout }: { layout: SceneLayout }) {
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  useFrame(({ clock }) => {
+  // one voice per car: traffic whooshes past as it crosses the camera
+  const voices = useMemo(() => lanes.map((_, i) => sceneAudio.voice("car", i)), [lanes]);
+  const tmp = useMemo(() => new THREE.Vector3(), []);
+  useEffect(() => () => voices.forEach((v) => v.dispose()), [voices]);
+
+  useFrame(({ clock, camera }) => {
     const t = clock.elapsedTime;
     const start = layout.startX - 120;
     const span = layout.endX + 120 - start;
@@ -45,6 +51,7 @@ export default function Cars({ layout }: { layout: SceneLayout }) {
       dummy.rotation.set(0, dir > 0 ? 0 : Math.PI, 0);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
+      voices[i].place(placementOf(dummy.position, camera, 70, tmp));
     }
     mesh.instanceMatrix.needsUpdate = true;
   });
