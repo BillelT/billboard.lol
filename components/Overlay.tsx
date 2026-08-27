@@ -135,7 +135,7 @@ export default function Overlay() {
         <div className="pill sub">a satire · bigger is better</div>
       </aside>
 
-      <div className={`hint ${scrolled ? "off" : ""}`}>scroll to drive past the ranking ↓</div>
+      <div className={`hint ${scrolled ? "off" : ""}`}>scroll or grab to drive past the ranking ↔</div>
       {perf && <PerfPanel />}
     </>
   );
