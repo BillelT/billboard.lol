@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { computeLayout, fmtFeet, fmtUSD } from "@/lib/layout";
@@ -7,7 +8,10 @@ import { scrollState } from "@/lib/scrollState";
 import { usePresence } from "@/lib/usePresence";
 import { sceneAudio } from "@/lib/audio";
 import { perfEnabled } from "@/lib/perfState";
+import { debugEnabled } from "@/lib/debugState";
 import PerfPanel from "./PerfPanel";
+
+const DebugPanel = dynamic(() => import("./DebugPanel"), { ssr: false });
 
 const STEPS = [1, 2, 5, 10, 20, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
 
@@ -41,7 +45,11 @@ export default function Overlay() {
   }, []);
 
   const [perf, setPerf] = useState(false);
-  useEffect(() => setPerf(perfEnabled()), []);
+  const [debug, setDebug] = useState(false);
+  useEffect(() => {
+    setPerf(perfEnabled());
+    setDebug(debugEnabled());
+  }, []);
 
   // scroll + pointer → mutable state read by the camera rig every frame
   useEffect(() => {
@@ -200,6 +208,7 @@ export default function Overlay() {
       </div>
 
       {perf && <PerfPanel />}
+      {debug && <DebugPanel />}
     </>
   );
 }

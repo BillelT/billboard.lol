@@ -21,9 +21,10 @@ export default function Lights() {
 
   return (
     <group ref={rig}>
-      <hemisphereLight args={[PAL.hemiSky, PAL.hemiGround, 1.45]} />
+      <hemisphereLight name="hemi" args={[PAL.hemiSky, PAL.hemiGround, 1.45]} />
       <directionalLight
         ref={light}
+        name="sun"
         color={PAL.sun}
         intensity={1.75}
         position={[-45, 105, -60]}
