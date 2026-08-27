@@ -16,8 +16,18 @@
   box-sizing: border-box;
 }
 
+/* The page scroll drives the camera, so the scrollbar is pure UI noise over
+   the 3D scene — hidden everywhere while scrolling itself stays untouched. */
 html {
   scroll-behavior: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge */
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 body {
