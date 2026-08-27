@@ -8,7 +8,21 @@ import { usePresence } from "@/lib/usePresence";
 import { perfEnabled } from "@/lib/perfState";
 import PerfPanel from "./PerfPanel";
 
-const STEPS = [1, 2, 5, 10, 20, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
+const CATEGORIES = [
+  "AI & Infrastructure",
+  "Marketing & Growth",
+  "Developer Tools",
+  "Business & Finance",
+  "Security & Privacy",
+  "Health & Wellness",
+  "Social & Community",
+  "Ecommerce & Retail",
+  "Education",
+  "Design & Creative",
+  "Productivity",
+  "Games & Entertainment",
+  "Other",
+];
 
 export default function Overlay() {
   const billboards = useStore((s) => s.billboards);
@@ -20,10 +34,14 @@ export default function Overlay() {
 
   const [amount, setAmount] = useState(20);
   const [domain, setDomain] = useState("");
+  const [category, setCategory] = useState<string | null>(null);
+  const [catOpen, setCatOpen] = useState(false);
+  const [catQuery, setCatQuery] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const dockRef = useRef<HTMLDivElement>(null);
+  const catRef = useRef<HTMLDivElement>(null);
 
   // publish the dock height so the gauge rail and the hint always clear it
   useEffect(() => {
@@ -61,11 +79,23 @@ export default function Overlay() {
     };
   }, []);
 
-  const step = (dir: 1 | -1) => {
-    const i = STEPS.findIndex((s) => s >= amount);
-    const cur = i === -1 ? STEPS.length - 1 : i;
-    setAmount(STEPS[Math.min(STEPS.length - 1, Math.max(0, cur + dir))]);
-  };
+  // close the category dropdown on an outside click
+  useEffect(() => {
+    if (!catOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (catRef.current && !catRef.current.contains(e.target as Node)) setCatOpen(false);
+    };
+    window.addEventListener("pointerdown", onDown);
+    return () => window.removeEventListener("pointerdown", onDown);
+  }, [catOpen]);
+
+  const setAmountSafe = (n: number) => setAmount(Math.max(1, Math.min(100000, Math.round(n))));
+  const step = (dir: 1 | -1) => setAmountSafe(amount + dir);
+
+  const filteredCategories = useMemo(
+    () => CATEGORIES.filter((c) => c.toLowerCase().includes(catQuery.trim().toLowerCase())),
+    [catQuery],
+  );
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,7 +159,14 @@ export default function Overlay() {
           <span className="gauge__key">sales</span>
           <b>{fmtUSD(totalBurned)}</b> made
         </div>
-        <div className="gauge gauge--sig">built by Billel</div>
+        <a
+          className="gauge gauge--sig"
+          href="https://x.com/billel_tighidet"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          built by Billel
+        </a>
       </aside>
 
       <div className={`hint ${scrolled ? "off" : ""}`}>scroll or grab to drive past the ranking ↔</div>
@@ -140,11 +177,27 @@ export default function Overlay() {
           <h1 className="dock__title">
             Plant your billboard for
             <span className="meter">
-              <button className="meter__step" onClick={() => step(-1)} aria-label="lower the amount">
+              <button className="meter__step" onClick={() => step(-1)} aria-label="lower the amount by 1">
                 −
               </button>
-              <strong className="meter__value">{fmtUSD(amount)}</strong>
-              <button className="meter__step" onClick={() => step(1)} aria-label="raise the amount">
+              <span className="meter__value">
+                <span className="meter__currency">$</span>
+                <input
+                  className="meter__input"
+                  type="number"
+                  min={1}
+                  max={100000}
+                  step={1}
+                  value={amount}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") return;
+                    setAmountSafe(Number(v));
+                  }}
+                  aria-label="billboard amount in dollars"
+                />
+              </span>
+              <button className="meter__step" onClick={() => step(1)} aria-label="raise the amount by 1">
                 +
               </button>
             </span>
@@ -152,12 +205,57 @@ export default function Overlay() {
 
           <form className="claim" onSubmit={submit}>
             <input
+              className="claim__domain"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
               placeholder="yourcompany.com"
               spellCheck={false}
               aria-label="your domain"
             />
+
+            <div className="cat" ref={catRef}>
+              <button
+                type="button"
+                className="cat__trigger"
+                onClick={() => setCatOpen((o) => !o)}
+                aria-haspopup="listbox"
+                aria-expanded={catOpen}
+              >
+                {category ?? "Choose a category"}
+                <span className="cat__chevron" aria-hidden="true">▾</span>
+              </button>
+              {catOpen && (
+                <div className="cat__panel" role="listbox">
+                  <input
+                    className="cat__search"
+                    value={catQuery}
+                    onChange={(e) => setCatQuery(e.target.value)}
+                    placeholder="Search categories…"
+                    autoFocus
+                    spellCheck={false}
+                  />
+                  <ul className="cat__list">
+                    {filteredCategories.map((c) => (
+                      <li key={c}>
+                        <button
+                          type="button"
+                          className={`cat__item ${c === category ? "active" : ""}`}
+                          onClick={() => {
+                            setCategory(c);
+                            setCatOpen(false);
+                            setCatQuery("");
+                          }}
+                        >
+                          {c}
+                        </button>
+                      </li>
+                    ))}
+                    {filteredCategories.length === 0 && <li className="cat__empty">No match.</li>}
+                  </ul>
+                </div>
+              )}
+            </div>
+
             <button type="submit" className="cta" disabled={busy}>
               {busy ? "…" : "Plant my billboard"}
             </button>
@@ -167,7 +265,7 @@ export default function Overlay() {
           {flash ? (
             <p className="lede">{flash}</p>
           ) : top ? (
-            <button className="lede lede--action" onClick={() => setAmount(top.amount + 1)}>
+            <button className="lede lede--action" onClick={() => setAmountSafe(top.amount + 1)}>
               {top.name} holds #1 with {fmtUSD(top.amount)} —{" "}
               <span>outgrow them for {fmtUSD(top.amount + 1)}</span>
             </button>
