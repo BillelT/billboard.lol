@@ -61,7 +61,7 @@ export default function SkyDome() {
   });
 
   return (
-    <mesh ref={ref} material={material} frustumCulled={false} renderOrder={-1}>
+    <mesh ref={ref} name="sky" material={material} frustumCulled={false} renderOrder={-1}>
       <sphereGeometry args={[1500, 24, 16]} />
     </mesh>
   );

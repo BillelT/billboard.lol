@@ -11,12 +11,15 @@ import {
   makePowerPoleGeometry,
 } from "@/lib/geometry";
 import type { SceneLayout } from "@/lib/layout";
+import { debugState } from "@/lib/debugState";
 import { vertexColorMat } from "./materials";
+import { useRebuild } from "./useRebuild";
 
 const CHUNK = 55; // world units of road per decor cell
 const BEHIND = 4;
 const AHEAD = 16; // reaches the fog wall, so the world never visibly runs out
 const CELLS = BEHIND + AHEAD + 1;
+const MAX_DENSITY = 3; // instance pools are sized for the debug panel's ceiling
 
 interface Kind {
   geometry: THREE.BufferGeometry;
@@ -31,6 +34,7 @@ interface Kind {
 // scrolling back shows the same trees in the same places.
 export default function Decor({ layout }: { layout: SceneLayout }) {
   const lastCell = useRef(Number.NaN);
+  const rebuild = useRebuild();
 
   const { group, kinds, meshes } = useMemo(() => {
     const treeSpot = (rng: () => number, x0: number, o: THREE.Object3D) => {
@@ -44,7 +48,7 @@ export default function Decor({ layout }: { layout: SceneLayout }) {
         r < 0.45 ? lerp(-78, -26, rng()) : r < 0.72 ? lerp(-190, -78, rng()) : lerp(14, 85, rng());
       o.position.set(x, groundHeight(x, z), z);
       o.rotation.set(0, rng() * Math.PI * 2, 0);
-      o.scale.setScalar(lerp(0.8, 2.1, rng()));
+      o.scale.setScalar(lerp(0.8, 2.1, rng()) * debugState.decor.treeScale);
     };
     const lowSpot = (min: number, max: number, sMin: number, sMax: number) =>
       (rng: () => number, x0: number, o: THREE.Object3D) => {
@@ -74,7 +78,7 @@ export default function Decor({ layout }: { layout: SceneLayout }) {
 
     const group = new THREE.Group();
     const meshes = kinds.map((k) => {
-      const mesh = new THREE.InstancedMesh(k.geometry, vertexColorMat, CELLS * k.perCell);
+      const mesh = new THREE.InstancedMesh(k.geometry, vertexColorMat, CELLS * k.perCell * MAX_DENSITY);
       mesh.castShadow = k.castShadow;
       mesh.receiveShadow = true;
       mesh.frustumCulled = false; // the pool always straddles the camera
@@ -87,14 +91,18 @@ export default function Decor({ layout }: { layout: SceneLayout }) {
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  const rebuild = useMemo(
+  const rebuildCells = useMemo(
     () => (centerCell: number) => {
       for (let ki = 0; ki < kinds.length; ki++) {
         const kind = kinds[ki];
         const mesh = meshes[ki];
+        const perCell = Math.max(
+          1,
+          Math.round(kind.perCell * Math.min(MAX_DENSITY, debugState.decor.density)),
+        );
         let n = 0;
         for (let c = centerCell - BEHIND; c <= centerCell + AHEAD; c++) {
-          for (let slot = 0; slot < kind.perCell; slot++) {
+          for (let slot = 0; slot < perCell; slot++) {
             // stable per (cell, kind, slot) so the world never reshuffles
             const seed = (c * 73856093) ^ (ki * 19349663) ^ (slot * 83492791);
             kind.place(mulberry32(seed >>> 0), c * CHUNK, dummy);
@@ -109,8 +117,13 @@ export default function Decor({ layout }: { layout: SceneLayout }) {
     [kinds, meshes, dummy],
   );
 
-  // seed the pool where the camera opens so nothing pops in on the first frame
-  useMemo(() => rebuild(Math.floor(layout.startX / CHUNK)), [rebuild, layout.startX]);
+  // seed the pool where the camera opens, and re-seed when a debug value moves
+  useMemo(() => {
+    const cell = Number.isNaN(lastCell.current)
+      ? Math.floor(layout.startX / CHUNK)
+      : lastCell.current;
+    rebuildCells(cell);
+  }, [rebuildCells, layout.startX, rebuild]);
 
   useEffect(
     () => () => {
@@ -126,7 +139,7 @@ export default function Decor({ layout }: { layout: SceneLayout }) {
     const cell = Math.floor(camera.position.x / CHUNK);
     if (cell === lastCell.current) return;
     lastCell.current = cell;
-    rebuild(cell);
+    rebuildCells(cell);
   });
 
   return <primitive object={group} />;

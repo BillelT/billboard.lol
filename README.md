@@ -77,5 +77,12 @@ downloaded when Supabase is configured).
 
 ### Dev tools
 
+- `?debug=1` — live tuning panel: fog (mode, where it starts, where it
+  saturates, density, colour), exposure and lights, sun direction, sky colours,
+  terrain relief, decor density and camera fov. "copy values" puts the whole
+  state on the clipboard, ready to paste back into `lib/debugState.ts` defaults.
 - `?perf=1` — live fps / draw calls / triangles / textures / DPR overlay.
 - `?stress=200` — fill the ranking with N synthetic companies.
+
+All three are lazy: the tuning panel is its own chunk and nothing ships to
+visitors who do not ask for it.

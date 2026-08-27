@@ -4,19 +4,21 @@ import { useEffect, useMemo } from "react";
 import { PAL } from "@/lib/palette";
 import { groundHeight, groundRows, groundTint } from "@/lib/terrain";
 import type { SceneLayout } from "@/lib/layout";
+import { useRebuild } from "./useRebuild";
 
-const COL_SPACING = 55;
+const COL_SPACING = 40;
 
 // Vertex-colored grass on a non-uniform grid: rows are tight near the road,
 // where props stand and the relief reads, and stretch out into the fog. That
 // keeps the mesh faithful to groundHeight() (so nothing floats) for a fraction
 // of the triangles a uniform grid of the same reach would cost.
 export default function Ground({ layout }: { layout: SceneLayout }) {
+  const rebuild = useRebuild();
   const geometry = useMemo(() => {
     const width = layout.endX - layout.startX + 1400;
     const cx = (layout.startX + layout.endX) / 2;
     const rows = groundRows();
-    const colCount = THREE.MathUtils.clamp(Math.round(width / COL_SPACING), 24, 140);
+    const colCount = THREE.MathUtils.clamp(Math.round(width / COL_SPACING), 28, 160);
 
     const cols: number[] = [];
     for (let i = 0; i <= colCount; i++) cols.push(-width / 2 + (width * i) / colCount);
@@ -62,7 +64,7 @@ export default function Ground({ layout }: { layout: SceneLayout }) {
     geo.setIndex(indices);
     geo.computeVertexNormals();
     return geo;
-  }, [layout.startX, layout.endX]);
+  }, [layout.startX, layout.endX, rebuild]);
 
   useEffect(() => () => geometry.dispose(), [geometry]);
 

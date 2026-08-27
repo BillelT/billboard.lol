@@ -17,7 +17,9 @@ import Helicopter from "./Helicopter";
 import CameraRig from "./CameraRig";
 import PerfProbe from "./PerfProbe";
 import AdaptiveDpr from "./AdaptiveDpr";
+import DebugSync from "./DebugSync";
 import { perfEnabled } from "@/lib/perfState";
+import { debugEnabled } from "@/lib/debugState";
 
 const MAX_DPR = 1.75;
 
@@ -25,6 +27,7 @@ export default function Scene() {
   const billboards = useStore((s) => s.billboards);
   const layout = useMemo(() => computeLayout(billboards), [billboards]);
   const perf = useMemo(() => perfEnabled(), []);
+  const debug = useMemo(() => debugEnabled(), []);
 
   return (
     <Canvas
@@ -58,6 +61,7 @@ export default function Scene() {
       <CameraRig layout={layout} />
       <AdaptiveDpr max={MAX_DPR} />
       {perf && <PerfProbe />}
+      {debug && <DebugSync />}
     </Canvas>
   );
 }
