@@ -37,6 +37,18 @@ body {
   display: block;
 }
 
+/* full-screen drag surface: grab the scene to drive along the road */
+.grabzone {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  cursor: grab;
+  touch-action: pan-y;
+}
+.grabzone.grabbing {
+  cursor: grabbing;
+}
+
 .spacer {
   position: relative;
   z-index: -1;
@@ -230,6 +242,7 @@ body {
   backdrop-filter: blur(10px);
   animation: bob 2.2s ease-in-out infinite;
   transition: opacity 0.4s ease;
+  pointer-events: none;
 }
 .hint.off {
   opacity: 0;

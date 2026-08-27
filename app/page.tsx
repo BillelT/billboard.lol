@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Experience from "@/components/Experience";
 import Overlay from "@/components/Overlay";
+import GrabNav from "@/components/GrabNav";
 import DataSync from "@/components/DataSync";
 import { getRanking } from "@/lib/ranking.server";
 import { fmtUSD } from "@/lib/layout";
@@ -26,6 +27,7 @@ export default function Page() {
   return (
     <main>
       <Experience />
+      <GrabNav />
       <Overlay />
       <DataSync />
     </main>
