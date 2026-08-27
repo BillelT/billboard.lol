@@ -4,7 +4,7 @@ export const PAL = {
   skyTop: "#5fb0ec",
   skyHorizon: "#eaf6ff",
   skyGround: "#d8ecdf",
-  fog: "#e6f2fb",
+  fog: "#eaf5ff",
   sun: "#fff3dd",
   hemiSky: "#cfe6fa",
   hemiGround: "#b8d9a2",

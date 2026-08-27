@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getSupabase } from "./supabase";
+import { getSupabase, supabaseConfigured } from "./supabase";
 
 // How many people are on the highway right now.
 // Supabase presence when configured; otherwise it's honestly just you.
@@ -8,22 +8,29 @@ export function usePresence(): number {
   const [count, setCount] = useState(1);
 
   useEffect(() => {
-    const supabase = getSupabase();
-    if (!supabase) return;
+    if (!supabaseConfigured()) return;
 
-    const key = `v-${Math.random().toString(36).slice(2, 10)}`;
-    const channel = supabase.channel("highway", { config: { presence: { key } } });
+    let channel: { unsubscribe: () => void } | null = null;
+    let cancelled = false;
 
-    channel
-      .on("presence", { event: "sync" }, () => {
-        setCount(Math.max(1, Object.keys(channel.presenceState()).length));
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") channel.track({ at: Date.now() });
+    (async () => {
+      const supabase = await getSupabase();
+      if (!supabase || cancelled) return;
+
+      const key = `v-${Math.random().toString(36).slice(2, 10)}`;
+      const ch = supabase.channel("highway", { config: { presence: { key } } });
+      channel = ch;
+
+      ch.on("presence", { event: "sync" }, () => {
+        setCount(Math.max(1, Object.keys(ch.presenceState()).length));
+      }).subscribe((status) => {
+        if (status === "SUBSCRIBED") ch.track({ at: Date.now() });
       });
+    })();
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      channel?.unsubscribe();
     };
   }, []);
 

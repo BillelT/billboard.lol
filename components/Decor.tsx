@@ -1,7 +1,9 @@
 "use client";
 import * as THREE from "three";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import { mulberry32, lerp } from "@/lib/rng";
+import { groundHeight } from "@/lib/terrain";
 import {
   makeTreeGeometry,
   makeRockGeometry,
@@ -11,86 +13,121 @@ import {
 import type { SceneLayout } from "@/lib/layout";
 import { vertexColorMat } from "./materials";
 
-// All static decor as a handful of InstancedMeshes. Trees stay behind the
-// billboard line or far foreground so they never block the camera; only low
-// props (rocks, bushes) sit near the road on the camera side.
+const CHUNK = 55; // world units of road per decor cell
+const BEHIND = 4;
+const AHEAD = 16; // reaches the fog wall, so the world never visibly runs out
+const CELLS = BEHIND + AHEAD + 1;
+
+interface Kind {
+  geometry: THREE.BufferGeometry;
+  perCell: number;
+  castShadow: boolean;
+  place: (rng: () => number, x0: number, o: THREE.Object3D) => void;
+}
+
+// Decor is generated per cell around the camera instead of once across the whole
+// road: instance counts stay constant whether the ranking holds 12 companies or
+// 200, density never thins out, and positions are a pure function of the cell so
+// scrolling back shows the same trees in the same places.
 export default function Decor({ layout }: { layout: SceneLayout }) {
-  const group = useMemo(() => {
-    const rng = mulberry32(1337);
-    const g = new THREE.Group();
-    const spanX = (pad: number) => lerp(layout.startX - pad, layout.endX + pad, rng());
+  const lastCell = useRef(Number.NaN);
 
-    const scatter = (
-      geo: THREE.BufferGeometry,
-      count: number,
-      placeFn: (d: THREE.Object3D) => void,
-      castShadow = true,
-    ) => {
-      const mesh = new THREE.InstancedMesh(geo, vertexColorMat, count);
-      const dummy = new THREE.Object3D();
-      for (let i = 0; i < count; i++) {
-        placeFn(dummy);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(i, dummy.matrix);
-      }
-      mesh.castShadow = castShadow;
+  const { group, kinds, meshes } = useMemo(() => {
+    const treeSpot = (rng: () => number, x0: number, o: THREE.Object3D) => {
+      const x = x0 + rng() * CHUNK;
+      // Most form a treeline just behind the billboards, which is the band the
+      // ground-level camera actually sees between two panels; the rest add depth
+      // further back, or sit on the near side of the road under the aerial
+      // camera. Nothing goes between road and billboards, which would mask ads.
+      const r = rng();
+      const z =
+        r < 0.45 ? lerp(-78, -26, rng()) : r < 0.72 ? lerp(-190, -78, rng()) : lerp(14, 85, rng());
+      o.position.set(x, groundHeight(x, z), z);
+      o.rotation.set(0, rng() * Math.PI * 2, 0);
+      o.scale.setScalar(lerp(0.8, 2.1, rng()));
+    };
+    const lowSpot = (min: number, max: number, sMin: number, sMax: number) =>
+      (rng: () => number, x0: number, o: THREE.Object3D) => {
+        const x = x0 + rng() * CHUNK;
+        const z = (rng() < 0.5 ? -1 : 1) * lerp(min, max, rng());
+        o.position.set(x, groundHeight(x, z), z);
+        o.rotation.set(0, rng() * Math.PI * 2, 0);
+        o.scale.setScalar(lerp(sMin, sMax, rng()));
+      };
+
+    const kinds: Kind[] = [
+      { geometry: makeTreeGeometry("round"), perCell: 5, castShadow: true, place: treeSpot },
+      { geometry: makeTreeGeometry("tall"), perCell: 3, castShadow: true, place: treeSpot },
+      { geometry: makeRockGeometry(), perCell: 3, castShadow: true, place: lowSpot(9, 60, 0.35, 1.4) },
+      { geometry: makeBushGeometry(), perCell: 4, castShadow: false, place: lowSpot(7.5, 70, 0.6, 1.8) },
+      {
+        geometry: makePowerPoleGeometry(),
+        perCell: 1,
+        castShadow: true,
+        place: (_rng, x0, o) => {
+          o.position.set(x0, groundHeight(x0, 7.8), 7.8);
+          o.rotation.set(0, 0, 0);
+          o.scale.setScalar(1);
+        },
+      },
+    ];
+
+    const group = new THREE.Group();
+    const meshes = kinds.map((k) => {
+      const mesh = new THREE.InstancedMesh(k.geometry, vertexColorMat, CELLS * k.perCell);
+      mesh.castShadow = k.castShadow;
       mesh.receiveShadow = true;
-      g.add(mesh);
+      mesh.frustumCulled = false; // the pool always straddles the camera
+      group.add(mesh);
       return mesh;
-    };
-
-    const treeSpot = (d: THREE.Object3D) => {
-      // behind the billboards, or far foreground beyond the camera rail
-      const behind = rng() < 0.72;
-      d.position.set(spanX(120), 0, behind ? lerp(-140, -26, rng()) : lerp(95, 180, rng()));
-      d.rotation.set(0, rng() * Math.PI * 2, 0);
-      d.scale.setScalar(lerp(0.8, 2.1, rng()));
-    };
-    scatter(makeTreeGeometry("round"), 70, treeSpot);
-    scatter(makeTreeGeometry("tall"), 45, treeSpot);
-
-    scatter(makeRockGeometry(), 50, (d) => {
-      const side = rng() < 0.5 ? -1 : 1;
-      d.position.set(spanX(80), 0, side * lerp(9, 60, rng()));
-      d.rotation.set(0, rng() * Math.PI * 2, 0);
-      d.scale.setScalar(lerp(0.35, 1.4, rng()));
     });
 
-    scatter(makeBushGeometry(), 80, (d) => {
-      const side = rng() < 0.5 ? -1 : 1;
-      d.position.set(spanX(100), 0, side * lerp(7.5, 70, rng()));
-      d.rotation.set(0, rng() * Math.PI * 2, 0);
-      d.scale.setScalar(lerp(0.6, 1.8, rng()));
-    }, false);
+    return { group, kinds, meshes };
+  }, []);
 
-    // power poles marching along the camera side of the road
-    const poleGeo = makePowerPoleGeometry();
-    const poleCount = Math.max(4, Math.floor((layout.endX - layout.startX) / 55));
-    const poles = new THREE.InstancedMesh(poleGeo, vertexColorMat, poleCount);
-    const dummy = new THREE.Object3D();
-    for (let i = 0; i < poleCount; i++) {
-      dummy.position.set(layout.startX + i * 55, 0, 7.8);
-      dummy.rotation.set(0, 0, 0);
-      dummy.scale.setScalar(1);
-      dummy.updateMatrix();
-      poles.setMatrixAt(i, dummy.matrix);
-    }
-    poles.castShadow = true;
-    g.add(poles);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
 
-    return g;
-  }, [layout.startX, layout.endX]);
+  const rebuild = useMemo(
+    () => (centerCell: number) => {
+      for (let ki = 0; ki < kinds.length; ki++) {
+        const kind = kinds[ki];
+        const mesh = meshes[ki];
+        let n = 0;
+        for (let c = centerCell - BEHIND; c <= centerCell + AHEAD; c++) {
+          for (let slot = 0; slot < kind.perCell; slot++) {
+            // stable per (cell, kind, slot) so the world never reshuffles
+            const seed = (c * 73856093) ^ (ki * 19349663) ^ (slot * 83492791);
+            kind.place(mulberry32(seed >>> 0), c * CHUNK, dummy);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(n++, dummy.matrix);
+          }
+        }
+        mesh.count = n;
+        mesh.instanceMatrix.needsUpdate = true;
+      }
+    },
+    [kinds, meshes, dummy],
+  );
+
+  // seed the pool where the camera opens so nothing pops in on the first frame
+  useMemo(() => rebuild(Math.floor(layout.startX / CHUNK)), [rebuild, layout.startX]);
 
   useEffect(
     () => () => {
-      group.children.forEach((c) => {
-        const m = c as THREE.InstancedMesh;
+      meshes.forEach((m) => {
         m.geometry.dispose();
         m.dispose();
       });
     },
-    [group],
+    [meshes],
   );
+
+  useFrame(({ camera }) => {
+    const cell = Math.floor(camera.position.x / CHUNK);
+    if (cell === lastCell.current) return;
+    lastCell.current = cell;
+    rebuild(cell);
+  });
 
   return <primitive object={group} />;
 }

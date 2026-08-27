@@ -5,6 +5,8 @@ import { computeLayout, fmtFeet, fmtUSD } from "@/lib/layout";
 import { brandColorFor } from "@/lib/palette";
 import { scrollState } from "@/lib/scrollState";
 import { usePresence } from "@/lib/usePresence";
+import { perfEnabled } from "@/lib/perfState";
+import PerfPanel from "./PerfPanel";
 
 const STEPS = [1, 2, 5, 10, 20, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
 
@@ -35,6 +37,9 @@ export default function Overlay() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  const [perf, setPerf] = useState(false);
+  useEffect(() => setPerf(perfEnabled()), []);
 
   // scroll + pointer → mutable state read by the camera rig every frame
   useEffect(() => {
@@ -91,7 +96,9 @@ export default function Overlay() {
     }
   };
 
-  const pages = Math.max(6, layout.items.length * 0.9);
+  // scroll length grows with the ranking but sub-linearly, so 200 billboards
+  // stay a long drive rather than an endless one
+  const pages = Math.min(60, 6 + layout.items.length * 0.55);
 
   return (
     <>
@@ -125,7 +132,7 @@ export default function Overlay() {
         <div className="gauge gauge--sig">built by Billel</div>
       </aside>
 
-      <div className={`hint ${scrolled ? "off" : ""}`}>scroll to drive past the ranking</div>
+      <div className={`hint ${scrolled ? "off" : ""}`}>scroll or grab to drive past the ranking ↔</div>
 
       {/* claim dock — anchored low so it never fights the billboards for the sky */}
       <div className="dock">
@@ -169,6 +176,8 @@ export default function Overlay() {
           )}
         </div>
       </div>
+
+      {perf && <PerfPanel />}
     </>
   );
 }

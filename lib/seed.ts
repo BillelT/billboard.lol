@@ -1,4 +1,17 @@
 import type { Billboard } from "./types";
+import { BRAND_COLORS } from "./palette";
+
+// Dev stress ranking (?stress=200): what the highway looks like with a real
+// crowd of companies on it. Used to check draw calls and texture memory scale.
+export function makeStressRanking(n: number): Billboard[] {
+  return Array.from({ length: n }, (_, i) => ({
+    id: `stress-${i}`,
+    name: `company-${i + 1}.com`,
+    url: "https://example.com",
+    color: BRAND_COLORS[i % BRAND_COLORS.length],
+    amount: Math.round(4000 / Math.pow(i + 1, 0.85)) + 1,
+  }));
+}
 
 // Demo-mode ranking. Replaced by Supabase data when configured.
 export const SEED: Billboard[] = [
