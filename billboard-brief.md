@@ -37,8 +37,8 @@ Objectif : le rendu EST le produit. L'audience visée juge sur le craft, pas sur
 
 - **Low/mid poly assumé** : silhouettes lisibles, arêtes franches, chamfers légers sur les bords vus de près (un low poly "premium", pas un placeholder). Normales dures sur les objets géométriques, smooth uniquement où c'est voulu.
 - **Un seul langage de forme** pour tout le décor : même densité polygonale relative, mêmes proportions cartoon (arbres trapus, voitures compactes), même échelle de détail. Rien ne doit sembler venir d'un pack d'assets différent.
-- **Palette fermée** : 8–12 couleurs définies une fois (désert/route US : sable, terracotta, vert sauge, asphalte chaud, ciel dégradé), appliquées par **vertex colors ou mini-atlas de gradients** plutôt que par textures photo. Zéro texture réaliste — c'est ce qui garantit la cohérence ET le poids plume.
-- **Lumière unique et chaude** : une directionnelle (soleil fin d'après-midi) + hémisphérique pour les ombres colorées. Les ombres portées du décor statique sont **bakées** ; seuls les billboards (dynamiques) projettent en temps réel.
+- **Palette fermée** : 8–12 couleurs définies une fois (plein jour façon topfloor : ciel bleu pâle avec brume blanche à l'horizon, herbe verte fraîche, structures blanches/acier clair, panneaux aux couleurs brand), appliquées par **vertex colors** plutôt que par textures photo. Zéro texture réaliste — c'est ce qui garantit la cohérence ET le poids plume.
+- **Lumière douce et aérée** : une directionnelle + hémisphérique généreuse pour des ombres claires et colorées, jamais noires. Les nuages projettent les grandes ombres au sol de la section aérienne.
 - **Le billboard comme objet héros** : structure poteau + plateforme + cadre, déclinée en 3–4 tailles. Le logo client vit dans un cadre 3D qui l'intègre à la DA (bords, matière, légère émission la nuit si on ajoute un cycle jour/nuit plus tard).
 
 ## Expert WebGL — rendu & performance
