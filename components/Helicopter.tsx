@@ -10,6 +10,7 @@ import {
 import { makeBannerTexture } from "@/lib/textures";
 import { BILL_Z, fmtUSD, type SceneLayout } from "@/lib/layout";
 import { vertexColorMat } from "./materials";
+import { placementOf, sceneAudio } from "@/lib/audio";
 
 const BANNER_W = 18;
 const BANNER_H = 3;
@@ -62,7 +63,12 @@ export default function Helicopter({ layout }: { layout: SceneLayout }) {
     };
   }, [layout]);
 
-  useFrame(({ clock }, dt) => {
+  // rotor noise, loudest when the chopper crosses right by the camera
+  const voice = useMemo(() => sceneAudio.voice("heli"), []);
+  const tmp = useMemo(() => new THREE.Vector3(), []);
+  useEffect(() => () => voice.dispose(), [voice]);
+
+  useFrame(({ clock, camera }, dt) => {
     const t = clock.elapsedTime;
     const g = group.current;
     if (!g) return;
@@ -74,6 +80,8 @@ export default function Helicopter({ layout }: { layout: SceneLayout }) {
     );
     g.rotation.z = Math.sin(t * 0.7) * 0.045;
     g.rotation.y = Math.sin(t * 0.31) * 0.05;
+
+    voice.place(placementOf(g.position, camera, 190, tmp));
 
     if (rotor.current) rotor.current.rotation.y += dt * 26;
     if (tailRotor.current) tailRotor.current.rotation.x += dt * 34;

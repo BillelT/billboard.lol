@@ -5,6 +5,7 @@ import { computeLayout, fmtFeet, fmtUSD } from "@/lib/layout";
 import { brandColorFor } from "@/lib/palette";
 import { scrollState } from "@/lib/scrollState";
 import { usePresence } from "@/lib/usePresence";
+import { sceneAudio } from "@/lib/audio";
 import { perfEnabled } from "@/lib/perfState";
 import PerfPanel from "./PerfPanel";
 
@@ -23,6 +24,7 @@ export default function Overlay() {
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [sound, setSound] = useState(false);
   const dockRef = useRef<HTMLDivElement>(null);
 
   // publish the dock height so the gauge rail and the hint always clear it
@@ -58,6 +60,17 @@ export default function Overlay() {
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("pointermove", onPointer);
+    };
+  }, []);
+
+  // the sound engine can only start from a gesture, so mirror its state here
+  useEffect(() => {
+    const off = sceneAudio.subscribe(setSound);
+    const disarm = sceneAudio.armFromPreference();
+    setSound(sceneAudio.enabled);
+    return () => {
+      off();
+      disarm();
     };
   }, []);
 
@@ -129,6 +142,15 @@ export default function Overlay() {
           <span className="gauge__key">sales</span>
           <b>{fmtUSD(totalBurned)}</b> made
         </div>
+        <button
+          className="gauge gauge--sound"
+          onClick={() => sceneAudio.toggle()}
+          aria-pressed={sound}
+          title={sound ? "Mute the highway" : "Hear the highway"}
+        >
+          <span className="gauge__key">sound</span>
+          <b>{sound ? "🔊 on" : "🔇 off"}</b>
+        </button>
         <div className="gauge gauge--sig">built by Billel</div>
       </aside>
 
