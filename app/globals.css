@@ -205,6 +205,18 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
 }
+.gauge--sound {
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.gauge--sound:hover {
+  background: var(--paper);
+}
+.gauge--sound[aria-pressed="true"] {
+  border-left-color: var(--signal);
+}
+
 .gauge--sig {
   border-left-color: var(--marking);
   font-size: 12px;
