@@ -42,10 +42,10 @@ export default function Scene() {
         gl.toneMappingExposure = 1.12;
       }}
     >
-      {/* exponential rather than linear: no hard band where the fog tops out,
-          the world just dissolves into the horizon colour before the decor
-          runs out */}
-      <fogExp2 attach="fog" args={[PAL.fog, 0.0015]} />
+      {/* Haze starts close and climbs slowly all the way out. Exponential fog
+          did the opposite — nothing nearby, then a sharp wall — and a short
+          linear range put a visible band where it topped out. */}
+      <fog attach="fog" args={[PAL.fog, 80, 1500]} />
       <SkyDome />
       <Lights />
       <Ground layout={layout} />
