@@ -35,6 +35,12 @@ export const PAL = {
   carColors: ["#f2b632", "#e4572e", "#3aa6a6", "#f5f5f0", "#5b8cd6"],
   wheel: "#2c2c30",
   window: "#3a4a5a",
+
+  // helicopter
+  heliBody: "#e4572e",
+  heliRoof: "#f7f7f4",
+  heliDark: "#4a4f57",
+  rotor: "#5b6069",
 } as const;
 
 // Brand colors offered for billboards (and used by the seed data)

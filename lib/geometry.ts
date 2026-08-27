@@ -127,6 +127,53 @@ export function makeCloudGeometry(): THREE.BufferGeometry {
   return merged;
 }
 
+// Helicopter faces +X (the direction it flies).
+export function makeHelicopterGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  parts.push(paint(place(box(3.4, 1.7, 1.6), 0, 0, 0), PAL.heliBody));
+  parts.push(paint(place(box(3.5, 0.42, 1.5), -0.1, 0.78, 0), PAL.heliRoof));
+  parts.push(paint(place(box(1.1, 1.15, 1.3), 2.05, -0.16, 0), PAL.heliBody));
+  parts.push(paint(place(box(0.85, 0.95, 1.36), 1.9, 0.3, 0), PAL.window));
+  parts.push(paint(place(box(1.0, 0.75, 1.66), -0.4, 0.05, 0), PAL.window));
+  // tail
+  parts.push(paint(place(box(3.6, 0.44, 0.44), -3.3, 0.34, 0), PAL.heliBody));
+  parts.push(paint(place(box(0.55, 1.25, 0.18), -4.9, 0.95, 0), PAL.heliBody));
+  parts.push(paint(place(box(0.45, 0.14, 1.5), -4.5, 0.42, 0), PAL.heliRoof));
+  // skids
+  for (const sz of [0.68, -0.68]) {
+    parts.push(paint(place(box(2.9, 0.14, 0.14), 0.2, -1.3, sz), PAL.heliDark));
+    for (const sx of [0.95, -0.6]) {
+      parts.push(paint(place(box(0.14, 0.62, 0.14), sx, -1.0, sz * 0.86), PAL.heliDark));
+    }
+  }
+  // mast
+  parts.push(paint(place(new THREE.CylinderGeometry(0.13, 0.16, 0.6, 6), 0, 1.15, 0), PAL.heliDark));
+  const merged = mergeGeometries(parts, false)!;
+  parts.forEach((p) => p.dispose());
+  return merged;
+}
+
+export function makeMainRotorGeometry(): THREE.BufferGeometry {
+  const parts = [
+    paint(place(new THREE.CylinderGeometry(0.22, 0.22, 0.22, 8), 0, 0, 0), PAL.heliDark),
+    paint(place(box(8.2, 0.08, 0.38), 0, 0, 0), PAL.rotor),
+    paint(place(box(0.38, 0.08, 8.2), 0, 0, 0), PAL.rotor),
+  ];
+  const merged = mergeGeometries(parts, false)!;
+  parts.forEach((p) => p.dispose());
+  return merged;
+}
+
+export function makeTailRotorGeometry(): THREE.BufferGeometry {
+  const parts = [
+    paint(place(box(1.5, 0.06, 0.2), 0, 0, 0), PAL.rotor),
+    paint(place(box(0.2, 0.06, 1.5), 0, 0, 0), PAL.rotor),
+  ];
+  const merged = mergeGeometries(parts, false)!;
+  parts.forEach((p) => p.dispose());
+  return merged;
+}
+
 export function makeCarGeometry(color: string): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
   parts.push(paint(place(box(2.5, 0.62, 1.18), 0, 0.66, 0), color));

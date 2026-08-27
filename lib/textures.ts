@@ -5,6 +5,23 @@ import { fmtUSD } from "./layout";
 // left, big #rank / $amount on the right. Drawn once per (billboard, amount).
 const cache = new Map<string, THREE.CanvasTexture>();
 
+function trackTexture(key: string, tex: THREE.CanvasTexture) {
+  if (cache.size > 80) {
+    const first = cache.keys().next().value as string;
+    cache.get(first)?.dispose();
+    cache.delete(first);
+  }
+  cache.set(key, tex);
+}
+
+// Same family the HUD uses (next/font generates the actual family name), so the
+// billboard faces and the interface share one typeface.
+function uiFont(): string {
+  const stack =
+    typeof document !== "undefined" ? getComputedStyle(document.body).fontFamily : "";
+  return stack || 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+}
+
 function shade(hex: string, f: number): string {
   const c = new THREE.Color(hex);
   c.offsetHSL(0, 0, f);
@@ -27,8 +44,8 @@ export function makeFaceTexture(opts: {
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
-  const font = (w: number, s: number) =>
-    `${w} ${s}px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  const family = uiFont();
+  const font = (w: number, s: number) => `${w} ${s}px ${family}`;
 
   // background: subtle vertical ramp of the brand color + faint tile grid
   const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -108,11 +125,45 @@ export function makeFaceTexture(opts: {
   tex.generateMipmaps = true;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
 
-  if (cache.size > 80) {
-    const first = cache.keys().next().value as string;
-    cache.get(first)?.dispose();
-    cache.delete(first);
+  trackTexture(key, tex);
+  return tex;
+}
+
+// Towed banner: white strip, red border, the current leader spelled out.
+export function makeBannerTexture(text: string): THREE.CanvasTexture {
+  const key = `banner|${text}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const W = 1536;
+  const H = 224;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#fdfdfb";
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#e4572e";
+  ctx.fillRect(0, 0, W, 16);
+  ctx.fillRect(0, H - 16, W, 16);
+
+  let size = 108;
+  const family = uiFont();
+  const fit = () => (ctx.font = `700 ${size}px ${family}`);
+  fit();
+  while (size > 40 && ctx.measureText(text).width > W - 120) {
+    size -= 4;
+    fit();
   }
-  cache.set(key, tex);
+  ctx.fillStyle = "#1f2733";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, W / 2, H / 2 + 4);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  trackTexture(key, tex);
   return tex;
 }
