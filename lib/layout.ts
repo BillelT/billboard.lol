@@ -41,3 +41,8 @@ export function computeLayout(billboards: Billboard[]): SceneLayout {
 
 export const fmtUSD = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+
+// One world unit ≈ one metre, so the scene can brag in feet like a real highway sign.
+export const FEET_PER_UNIT = 3.28084;
+export const fmtFeet = (units: number) =>
+  `${Math.round(units * FEET_PER_UNIT).toLocaleString("en-US")} ft`;
