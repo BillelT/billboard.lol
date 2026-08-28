@@ -3,7 +3,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { computeLayout, driveLength, fmtFeet, fmtUSD } from "@/lib/layout";
-import { brandColorFor } from "@/lib/palette";
+import { CATEGORIES } from "@/lib/categories";
 import { scrollState } from "@/lib/scrollState";
 import { usePresence } from "@/lib/usePresence";
 import { sceneAudio } from "@/lib/audio";
@@ -14,25 +14,34 @@ import PerfPanel from "./PerfPanel";
 
 const DebugPanel = dynamic(() => import("./DebugPanel"), { ssr: false });
 
-const CATEGORIES = [
-  "AI & Infrastructure",
-  "Marketing & Growth",
-  "Developer Tools",
-  "Business & Finance",
-  "Security & Privacy",
-  "Health & Wellness",
-  "Social & Community",
-  "Ecommerce & Retail",
-  "Education",
-  "Design & Creative",
-  "Productivity",
-  "Games & Entertainment",
-  "Other",
-];
+// what /api/site-info reads off the domain: real favicon, real SEO copy, and the
+// background colour picked from the icon
+interface SiteInfo {
+  domain: string;
+  url: string;
+  title: string | null;
+  description: string | null;
+  icon: string | null;
+  color: string;
+  resolved: boolean;
+}
+
+type Preview =
+  | { state: "idle" }
+  | { state: "loading" }
+  | { state: "error" }
+  | { state: "ready"; info: SiteInfo };
+
+const cleanDomain = (v: string) =>
+  v
+    .trim()
+    .toLowerCase()
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/[/?#].*$/, "");
 
 export default function Overlay() {
   const billboards = useStore((s) => s.billboards);
-  const addBid = useStore((s) => s.addBid);
   const layout = useMemo(() => computeLayout(billboards), [billboards]);
   const top = layout.items[0];
   const totalBurned = useMemo(() => billboards.reduce((a, b) => a + b.amount, 0), [billboards]);
@@ -44,6 +53,7 @@ export default function Overlay() {
   const [catOpen, setCatOpen] = useState(false);
   const [catQuery, setCatQuery] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Preview>({ state: "idle" });
   const [busy, setBusy] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [sound, setSound] = useState(false);
@@ -114,6 +124,45 @@ export default function Overlay() {
     return () => window.removeEventListener("pointerdown", onDown);
   }, [catOpen]);
 
+  // live preview: the real favicon, the site's own SEO copy and the colour picked
+  // from that icon — exactly what the paid billboard will show
+  useEffect(() => {
+    const name = cleanDomain(domain);
+    if (!name.includes(".") || name.length < 4) {
+      setPreview({ state: "idle" });
+      return;
+    }
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      setPreview({ state: "loading" });
+      try {
+        const res = await fetch(`/api/site-info?domain=${encodeURIComponent(name)}`, {
+          signal: ctrl.signal,
+        });
+        const data = (await res.json()) as SiteInfo & { error?: string };
+        if (!res.ok || data.error) setPreview({ state: "error" });
+        else setPreview({ state: "ready", info: data });
+      } catch {
+        if (!ctrl.signal.aborted) setPreview({ state: "error" });
+      }
+    }, 450);
+    return () => {
+      ctrl.abort();
+      clearTimeout(timer);
+    };
+  }, [domain]);
+
+  // coming back from Stripe: the webhook plants the billboard, we just say so
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const planted = params.get("planted");
+    if (planted) setFlash(`Payment received — ${planted} is going up on the highway.`);
+    else if (params.get("cancelled")) setFlash("Checkout cancelled — nothing was charged.");
+    if (planted || params.get("cancelled")) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
   const setAmountSafe = (n: number) => setAmount(Math.max(1, Math.min(100000, Math.round(n))));
   const step = (dir: 1 | -1) => setAmountSafe(amount + dir);
 
@@ -122,9 +171,10 @@ export default function Overlay() {
     [catQuery],
   );
 
+  // there is no local path: a billboard exists once Stripe has taken the money
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const name = domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    const name = cleanDomain(domain);
     if (!name || busy) return;
     setBusy(true);
     setFlash(null);
@@ -132,18 +182,14 @@ export default function Overlay() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, amount }),
+        body: JSON.stringify({ name, amount, category }),
       });
-      const data = await res.json();
-      if (data.url) {
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (res.ok && data.url) {
         window.location.href = data.url;
-      } else if (data.demo) {
-        addBid({ name, url: `https://${name}`, amount, color: brandColorFor(name) });
-        setFlash(`${name} planted for ${fmtUSD(amount)} — demo mode, no payment taken.`);
-        setDomain("");
-      } else {
-        setFlash(data.error ?? "Something went wrong.");
+        return;
       }
+      setFlash(data.error ?? "Something went wrong.");
     } catch {
       setFlash("Network error — try again.");
     } finally {
@@ -312,6 +358,40 @@ export default function Overlay() {
               {busy ? "…" : "Plant my billboard"}
             </button>
           </form>
+
+          {/* what the money buys, read off the domain itself */}
+          {preview.state === "loading" && (
+            <p className="peek peek--muted">reading {cleanDomain(domain)}…</p>
+          )}
+          {preview.state === "error" && (
+            <p className="peek peek--muted">
+              couldn&apos;t read {cleanDomain(domain)} — check the domain.
+            </p>
+          )}
+          {preview.state === "ready" &&
+            (preview.info.resolved || preview.info.icon ? (
+              <div className="peek peek--card" style={{ background: preview.info.color }}>
+                <span className="peek__tile">
+                  {preview.info.icon ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={preview.info.icon} alt="" width={34} height={34} />
+                  ) : (
+                    <b style={{ color: preview.info.color }}>
+                      {preview.info.domain.charAt(0).toUpperCase()}
+                    </b>
+                  )}
+                </span>
+                <span className="peek__text">
+                  <b>{preview.info.domain}</b>
+                  <em>{preview.info.description ?? preview.info.title ?? "your ad, but bigger"}</em>
+                </span>
+                <span className="peek__note">your billboard</span>
+              </div>
+            ) : (
+              <p className="peek peek--muted">
+                couldn&apos;t reach {preview.info.domain} — check the domain.
+              </p>
+            ))}
 
           {/* the single line about #1 — click it to load the winning amount */}
           {flash ? (
