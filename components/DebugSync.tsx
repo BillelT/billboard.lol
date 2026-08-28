@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { debugState } from "@/lib/debugState";
+import { debugState, sunPosition } from "@/lib/debugState";
 
 // Applies the live debug values to the running scene every frame. Cheap
 // assignments only: anything needing a rebuild goes through the rebuild
@@ -53,9 +53,7 @@ export default function DebugSync() {
     const sun = scene.getObjectByName("sun") as THREE.DirectionalLight | undefined;
     if (sun) {
       sun.intensity = d.light.sun;
-      const r = 130;
-      const { sunAzimuth: a, sunElevation: e } = d.light;
-      sun.position.set(r * Math.cos(e) * Math.sin(a), r * Math.sin(e), r * Math.cos(e) * Math.cos(a));
+      sun.position.set(...sunPosition());
     }
     const hemi = scene.getObjectByName("hemi") as THREE.HemisphereLight | undefined;
     if (hemi) hemi.intensity = d.light.hemi;

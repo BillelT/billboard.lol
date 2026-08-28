@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { PAL } from "@/lib/palette";
+import { debugState, sunPosition } from "@/lib/debugState";
 
 // One warm sun + hemisphere fill. The rig follows the camera along X so a single
 // 2048 shadow map covers the whole drive with a tight frustum.
@@ -21,13 +22,13 @@ export default function Lights() {
 
   return (
     <group ref={rig}>
-      <hemisphereLight name="hemi" args={[PAL.hemiSky, PAL.hemiGround, 1.45]} />
+      <hemisphereLight name="hemi" args={[PAL.hemiSky, PAL.hemiGround, debugState.light.hemi]} />
       <directionalLight
         ref={light}
         name="sun"
         color={PAL.sun}
-        intensity={1.75}
-        position={[-45, 105, -60]}
+        intensity={debugState.light.sun}
+        position={sunPosition()}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-145}

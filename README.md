@@ -69,8 +69,8 @@ Measured with `?perf=1` (draw calls / triangles are renderer counters):
 
 | ranking | draw calls | triangles | uploaded textures |
 | --- | --- | --- | --- |
-| 12 billboards | 19 | ~52k | 3–11 |
-| 200 billboards | 19–20 | ~64k | 3–13 |
+| 12 billboards | 19 | ~95k | 3–13 |
+| 200 billboards | 19–20 | ~105k | 3–13 |
 
 Initial JS is 108 kB (the three.js scene is a lazy chunk, and supabase-js is only
 downloaded when Supabase is configured).

@@ -24,24 +24,24 @@ export const debugState = {
     color: "#eaf5ff",
   },
   light: {
-    exposure: 1.12,
-    sun: 1.75,
-    hemi: 1.45,
-    sunAzimuth: -0.55, // radians around Y
-    sunElevation: 0.85, // radians above the horizon
+    exposure: 0.69,
+    sun: 2,
+    hemi: 1.4,
+    sunAzimuth: 0, // radians around Y
+    sunElevation: 0.62, // radians above the horizon
   },
   sky: {
     zenith: "#5fb0ec",
     horizon: "#eaf6ff",
   },
   terrain: {
-    amplitude: 1,
-    roadFlat: 90, // how far the ground stays flat around the road
-    farFade: 700, // distance over which the relief settles back down
+    amplitude: 3.5,
+    roadFlat: 250, // how far the ground stays flat around the road
+    farFade: 1425, // distance over which the relief settles back down
   },
   decor: {
-    density: 1,
-    treeScale: 1,
+    density: 2.1,
+    treeScale: 1.25,
   },
   camera: {
     fov: 45,
@@ -49,6 +49,15 @@ export const debugState = {
 };
 
 export type DebugState = typeof debugState;
+
+export const SUN_DISTANCE = 130;
+
+/** Sun position from its azimuth/elevation, so the light and the panel agree. */
+export function sunPosition(): [number, number, number] {
+  const { sunAzimuth: a, sunElevation: e } = debugState.light;
+  const r = SUN_DISTANCE;
+  return [r * Math.cos(e) * Math.sin(a), r * Math.sin(e), r * Math.cos(e) * Math.cos(a)];
+}
 
 export const DEBUG_GROUPS: { group: string; fields: DebugField[] }[] = [
   {
