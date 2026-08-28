@@ -5,7 +5,15 @@ import { debugState } from "@/lib/debugState";
 import { interactionState } from "@/lib/interactionState";
 import { BILL_Z } from "@/lib/layout";
 import { useStore } from "@/lib/store";
-import { carHitState, carClickQueue, CAR_HIT_HALF_X, CAR_HIT_HALF_Z, CAR_HIT_TOP } from "@/lib/carState";
+import {
+  carHitState,
+  carClickQueue,
+  CAR_HIT_HALF_X,
+  CAR_HIT_HALF_Z,
+  CAR_HIT_TOP,
+  stickyCar,
+  STICKY_MS,
+} from "@/lib/carState";
 
 // Horizontal drag on the scene = another way to drive down the highway.
 // It scrolls the page rather than touching scrollState directly, so the camera
@@ -233,7 +241,13 @@ export default function GrabNav() {
           return;
         }
         const carHit = hitTestCar(e.clientX, e.clientY);
-        if (carHit !== null) carClickQueue.push(carHit);
+        const now = performance.now();
+        const target = carHit ?? (now < stickyCar.until ? stickyCar.index : null);
+        if (target !== null) {
+          carClickQueue.push(target);
+          stickyCar.index = target;
+          stickyCar.until = now + STICKY_MS;
+        }
       }
     };
 

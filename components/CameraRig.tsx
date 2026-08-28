@@ -30,11 +30,11 @@ export default function CameraRig({ layout }: { layout: SceneLayout }) {
       posKeys.push(
         new THREE.Vector3(
           it.x - it.panelW * 0.1,
-          Math.max(2.6, it.totalH * 0.62 + 1.3),
-          BILL_Z + Math.max(it.totalH * 1.55, 15) + 5,
+          Math.max(4, it.totalH * 1.05 + 2),
+          BILL_Z + Math.max(it.totalH * 2.1, 20) + 8,
         ),
       );
-      lookKeys.push(new THREE.Vector3(it.x + it.panelW * 0.16, it.poleH + it.panelH * 0.45, BILL_Z));
+      lookKeys.push(new THREE.Vector3(it.x + it.panelW * 0.16, it.poleH * 0.4, BILL_Z + 10));
     }
     // roll out past the last billboard at car height
     posKeys.push(new THREE.Vector3(layout.endX + 12, 2.6, 3.5));
