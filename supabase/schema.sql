@@ -33,6 +33,29 @@ create table if not exists payments (
   created_at timestamptz not null default now()
 );
 
+-- total pageviews since launch — a single-row counter bumped through an RPC
+-- (never written to directly) so the anon key can only ever add one, never
+-- set an arbitrary total.
+create table if not exists site_visits (
+  id smallint primary key default 1,
+  total bigint not null default 0,
+  constraint site_visits_single_row check (id = 1)
+);
+
+insert into site_visits (id, total) values (1, 0) on conflict (id) do nothing;
+
+create or replace function bump_site_visits()
+returns bigint
+language sql
+security definer
+set search_path = public
+as $$
+  update site_visits set total = total + 1 where id = 1
+  returning total;
+$$;
+
+grant execute on function bump_site_visits() to anon, authenticated;
+
 -- current ranking = payments of the latest cycle, summed per company
 create or replace view current_ranking as
 select c.id, c.name, c.url, c.color, c.icon_url, c.title, c.description, c.category,
@@ -49,9 +72,13 @@ insert into cycles default values;
 alter table cycles enable row level security;
 alter table companies enable row level security;
 alter table payments enable row level security;
+alter table site_visits enable row level security;
 create policy "public read cycles" on cycles for select using (true);
 create policy "public read companies" on companies for select using (true);
 create policy "public read payments" on payments for select using (true);
+create policy "public read site_visits" on site_visits for select using (true);
 
--- realtime on payments so open tabs re-rank live
+-- realtime on payments so open tabs re-rank live, and on site_visits so the
+-- visitor gauge climbs live too
 alter publication supabase_realtime add table payments;
+alter publication supabase_realtime add table site_visits;

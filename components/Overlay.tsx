@@ -7,6 +7,7 @@ import { computeLayout, driveLength, fmtFeet, fmtUSD } from "@/lib/layout";
 import { CATEGORIES } from "@/lib/categories";
 import { scrollState } from "@/lib/scrollState";
 import { usePresence } from "@/lib/usePresence";
+import { useVisits } from "@/lib/useVisits";
 import { sceneAudio } from "@/lib/audio";
 import { perfEnabled } from "@/lib/perfState";
 import { debugEnabled, debugState } from "@/lib/debugState";
@@ -61,6 +62,7 @@ export default function Overlay() {
   const totalBurned = useMemo(() => billboards.reduce((a, b) => a + b.amount, 0), [billboards]);
   const realCount = useMemo(() => billboards.filter((b) => !b.placeholder).length, [billboards]);
   const online = usePresence(realCount);
+  const visits = useVisits();
 
   const [amount, setAmount] = useState(() => (top ? top.amount + 1 : 20));
   const [amountTouched, setAmountTouched] = useState(false);
@@ -279,6 +281,9 @@ export default function Overlay() {
         <div className="gauge">Tallest is {top ? fmtFeet(top.totalH) : "—"}</div>
         <div className="gauge">{realCount} billboards planted</div>
         <div className="gauge">{fmtUSD(totalBurned)} made</div>
+        <div className="gauge">
+          {visits !== null ? visits.toLocaleString("en-US") : "—"} visitors since launch
+        </div>
         <div className="gauge gauge--sound">
           <button
             className="gauge__soundBtn"
