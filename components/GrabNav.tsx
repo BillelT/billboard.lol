@@ -28,26 +28,31 @@ function ensureThree() {
   return threeMod;
 }
 
+// Reused across calls — hover fires this on every pointer move, so this stays
+// allocation-free instead of handing the GC a fresh raycaster per pixel.
+let raycaster: THREE.Raycaster | null = null;
+let hitBox: THREE.Box3 | null = null;
+let hitPoint: THREE.Vector3 | null = null;
+let ndc: THREE.Vector2 | null = null;
+
 function hitTest(clientX: number, clientY: number) {
   const THREE = ensureThree();
   const camera = interactionState.camera;
   if (!THREE || !camera) return null;
+  raycaster ??= new THREE.Raycaster();
+  hitBox ??= new THREE.Box3();
+  hitPoint ??= new THREE.Vector3();
+  ndc ??= new THREE.Vector2();
 
-  const raycaster = new THREE.Raycaster();
-  const box = new THREE.Box3();
-  const hitPoint = new THREE.Vector3();
-  const ndc = new THREE.Vector2(
-    (clientX / window.innerWidth) * 2 - 1,
-    -(clientY / window.innerHeight) * 2 + 1,
-  );
+  ndc.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
   raycaster.setFromCamera(ndc, camera);
 
   let best = null as (typeof interactionState.targets)[number] | null;
   let bestDist = Infinity;
   for (const t of interactionState.targets) {
-    box.min.set(t.x - t.panelW / 2, 0, BILL_Z - BOX_DEPTH);
-    box.max.set(t.x + t.panelW / 2, t.poleH + t.panelH, BILL_Z + BOX_DEPTH);
-    const hit = raycaster.ray.intersectBox(box, hitPoint);
+    hitBox.min.set(t.x - t.panelW / 2, 0, BILL_Z - BOX_DEPTH);
+    hitBox.max.set(t.x + t.panelW / 2, t.poleH + t.panelH, BILL_Z + BOX_DEPTH);
+    const hit = raycaster.ray.intersectBox(hitBox, hitPoint);
     if (!hit) continue;
     const d = camera.position.distanceTo(hit);
     if (d < bestDist) {
@@ -76,6 +81,10 @@ export default function GrabNav() {
     let velocity = 0; // page px per frame
     let raf = 0;
     let moved = false;
+    let hoverRaf = 0;
+    let hoverX = 0;
+    let hoverY = 0;
+    let hoveredId: string | null = null;
 
     const scrollMax = () => document.documentElement.scrollHeight - window.innerHeight;
 
@@ -106,6 +115,30 @@ export default function GrabNav() {
       raf = requestAnimationFrame(fling);
     };
 
+    // Whatever's under the pointer when it's not dragging: swap the cursor to a
+    // pointer and hand the id to interactionState so the billboard itself can
+    // light up. Run off rAF rather than every raw pointermove — hover fires far
+    // more often than a drag does, and a ray-box loop over every billboard on
+    // each of those is wasted work between frames.
+    const updateHover = () => {
+      hoverRaf = 0;
+      const hit = pointerId === null ? hitTest(hoverX, hoverY) : null;
+      const id = hit ? hit.id : null;
+      if (id === hoveredId) return;
+      hoveredId = id;
+      interactionState.hovered = id;
+      el.classList.toggle("hovering", id !== null);
+    };
+
+    const clearHover = () => {
+      cancelAnimationFrame(hoverRaf);
+      hoverRaf = 0;
+      if (hoveredId === null) return;
+      hoveredId = null;
+      interactionState.hovered = null;
+      el.classList.remove("hovering");
+    };
+
     const onDown = (e: PointerEvent) => {
       if (e.button !== 0 && e.pointerType === "mouse") return;
       pointerId = e.pointerId;
@@ -116,9 +149,16 @@ export default function GrabNav() {
       raf = 0;
       el.setPointerCapture(e.pointerId);
       el.classList.add("grabbing");
+      clearHover();
     };
 
     const onMove = (e: PointerEvent) => {
+      if (pointerId === null) {
+        hoverX = e.clientX;
+        hoverY = e.clientY;
+        if (!hoverRaf) hoverRaf = requestAnimationFrame(updateHover);
+        return;
+      }
       if (pointerId !== e.pointerId) return;
       const dx = e.clientX - lastX;
       lastX = e.clientX;
@@ -161,13 +201,16 @@ export default function GrabNav() {
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerup", onUp);
     el.addEventListener("pointercancel", onUp);
+    el.addEventListener("pointerleave", clearHover);
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => {
       cancelAnimationFrame(raf);
+      clearHover();
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
+      el.removeEventListener("pointerleave", clearHover);
       el.removeEventListener("wheel", onWheel);
     };
   }, []);

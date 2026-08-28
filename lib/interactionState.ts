@@ -1,6 +1,7 @@
 import type * as THREE from "three";
 
 export interface ClickTarget {
+  id: string;
   rank: number;
   amount: number;
   x: number;
@@ -18,10 +19,15 @@ export interface ClickTarget {
 // the live camera here every frame, Billboards publishes every clickable slot
 // (empty or claimed) whenever the layout changes, and GrabNav reads both to
 // hit-test a tap without ever touching the canvas's own event system.
+// `hovered` is the same hand-off in the other direction: GrabNav writes the id
+// of whatever's under the pointer, Billboards and HoverSpot read it every
+// frame to light up that one panel.
 export const interactionState: {
   camera: THREE.Camera | null;
   targets: ClickTarget[];
+  hovered: string | null;
 } = {
   camera: null,
   targets: [],
+  hovered: null,
 };

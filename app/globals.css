@@ -93,6 +93,9 @@ body {
 .grabzone.grabbing {
   cursor: grabbing;
 }
+.grabzone.hovering {
+  cursor: pointer;
+}
 
 .spacer {
   position: relative;

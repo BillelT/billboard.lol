@@ -10,6 +10,7 @@ import Lights from "./Lights";
 import Ground from "./Ground";
 import Road from "./Road";
 import Billboards from "./Billboards";
+import HoverSpot from "./HoverSpot";
 import Decor from "./Decor";
 import Clouds from "./Clouds";
 import Cars from "./Cars";
@@ -55,6 +56,7 @@ export default function Scene() {
       <Ground layout={layout} />
       <Road layout={layout} />
       <Billboards layout={layout} />
+      <HoverSpot />
       <Decor layout={layout} />
       <Clouds layout={layout} />
       <Cars layout={layout} />
