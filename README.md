@@ -1,4 +1,4 @@
-# OutGrow.lol
+# billboard.lol
 
 A low-poly American highway where companies bid for billboards. Pay more, get
 bigger, get seen first. A satire, obviously.

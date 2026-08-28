@@ -26,7 +26,7 @@ export default function Helicopter({ layout }: { layout: SceneLayout }) {
   const banner = useRef<THREE.Mesh>(null);
 
   const top = layout.items[0];
-  const text = top ? `NOW #1 · ${top.name.toUpperCase()} · ${fmtUSD(top.amount)}` : "OUTGROW.LOL";
+  const text = top ? `NOW #1 · ${top.name.toUpperCase()} · ${fmtUSD(top.amount)}` : "BILLBOARD.LOL";
 
   const geos = useMemo(
     () => ({

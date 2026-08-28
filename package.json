@@ -1,5 +1,5 @@
 {
-  "name": "outgrow-lol",
+  "name": "billboard-lol",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",

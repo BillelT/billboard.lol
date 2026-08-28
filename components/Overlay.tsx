@@ -159,7 +159,7 @@ export default function Overlay() {
       <header className="masthead">
         <a className="wordmark" href="/">
           <span className="wordmark__sign" aria-hidden="true" />
-          OutGrow<em>.lol</em>
+          billboard<em>.lol</em>
         </a>
       </header>
 

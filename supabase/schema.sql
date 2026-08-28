@@ -1,4 +1,4 @@
--- OutGrow.lol schema — companies / payments / cycles, per the brief.
+-- billboard.lol schema — companies / payments / cycles, per the brief.
 -- The ranking of a cycle is the sum of its payments per company, so resets are
 -- free: open a new cycle, the old one becomes the hall of fame.
 

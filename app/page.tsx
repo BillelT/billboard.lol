@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const ranking = await getRanking();
   const leader = [...ranking].sort((a, b) => b.amount - a.amount)[0];
   if (!leader) return {};
-  const title = `Currently #1: ${leader.name} — OutGrow.lol`;
+  const title = `Currently #1: ${leader.name} — billboard.lol`;
   const description = `${leader.name} paid ${fmtUSD(leader.amount)} for the biggest billboard on the highway. Take the top spot for ${fmtUSD(leader.amount + 1)}.`;
   return {
     title,
