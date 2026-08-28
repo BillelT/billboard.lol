@@ -421,11 +421,6 @@ export default function Overlay() {
             </button>
           </form>
 
-          <p className="dock__legal">
-            By paying, you agree to our <Link href="/terms">Terms</Link> and{" "}
-            <Link href="/privacy">Privacy Policy</Link>.
-          </p>
-
           {/* what the money buys, read off the domain itself */}
           {preview.state === "loading" && (
             <p className="peek peek--muted">reading {cleanDomain(domain)}…</p>
@@ -461,6 +456,11 @@ export default function Overlay() {
             ))}
 
           {flash && <p className="lede">{flash}</p>}
+
+          <p className="dock__legal">
+            By paying, you agree to our <Link href="/terms">Terms</Link> and{" "}
+            <Link href="/privacy">Privacy Policy</Link>.
+          </p>
         </div>
       </div>
 
