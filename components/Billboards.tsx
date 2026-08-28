@@ -27,7 +27,7 @@ function BillboardItem({ item }: { item: LayoutItem }) {
   );
   useEffect(() => () => geometry.dispose(), [geometry]);
 
-  const faceKey = `${item.name}|${item.color}|${item.amount}|${item.rank}`;
+  const faceKey = `${item.name}|${item.color}|${item.amount}|${item.rank}|${item.category ?? ""}`;
   useEffect(
     () => () => {
       painted.current?.tex.dispose();
@@ -72,6 +72,7 @@ function BillboardItem({ item }: { item: LayoutItem }) {
         icon,
         title: item.title,
         description: item.description,
+        category: item.category,
       });
       painted.current = { key: texKey, tex };
       mat.map = tex;
@@ -138,19 +139,20 @@ function EmptySlot({ item }: { item: LayoutItem }) {
 }
 
 export default function Billboards({ layout }: { layout: SceneLayout }) {
-  // GrabNav hit-tests taps against this list — only empty slots are clickable,
-  // and it only needs to change when the layout itself changes.
+  // GrabNav hit-tests taps against this list — every billboard is clickable:
+  // an empty slot opens the buy modal, a claimed one opens its owner's url.
+  // It only needs to change when the layout itself changes.
   useEffect(() => {
-    interactionState.targets = layout.items
-      .filter((it) => it.placeholder)
-      .map((it) => ({
-        rank: it.rank,
-        amount: it.amount,
-        x: it.x,
-        panelW: it.panelW,
-        panelH: it.panelH,
-        poleH: it.poleH,
-      }));
+    interactionState.targets = layout.items.map((it) => ({
+      rank: it.rank,
+      amount: it.amount,
+      x: it.x,
+      panelW: it.panelW,
+      panelH: it.panelH,
+      poleH: it.poleH,
+      placeholder: !!it.placeholder,
+      url: it.url,
+    }));
   }, [layout]);
 
   return (

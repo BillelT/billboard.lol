@@ -140,7 +140,12 @@ export default function GrabNav() {
         raf = requestAnimationFrame(fling);
       } else if (!moved) {
         const hit = hitTest(e.clientX, e.clientY);
-        if (hit) useStore.getState().openBuyModal({ rank: hit.rank, amount: hit.amount });
+        if (!hit) return;
+        if (hit.placeholder) {
+          useStore.getState().openBuyModal({ rank: hit.rank, amount: hit.amount });
+        } else if (hit.url) {
+          window.open(hit.url, "_blank", "noopener,noreferrer");
+        }
       }
     };
 
