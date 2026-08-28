@@ -20,7 +20,7 @@ const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61
 const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
 const PRIVATE_TLDS = new Set(["local", "localhost", "internal", "intranet", "test", "example", "invalid", "home", "lan"]);
 
-const UA = "Mozilla/5.0 (compatible; billboard.lol/1.0; +https://billboard.lol)";
+const UA = "Mozilla/5.0 (compatible; bidboard.lol/1.0; +https://bidboard.lol)";
 const HTML_TIMEOUT = 6000;
 const ICON_TIMEOUT = 5000;
 const MAX_HTML = 512 * 1024;

@@ -1,4 +1,4 @@
-# billboard.lol — Brief projet
+# bidboard.lol — Brief projet
 
 ## Pitch
 Une autoroute américaine en 3D low/mid-poly où chaque entreprise plante son billboard. Les entreprises **bid** pour apparaître en première position : plus elles paient, plus leur panneau est haut dans le ranking — et plus il est énorme à l'écran, jusqu'à écraser la vue. Satire du "toujours plus grand" version US.
