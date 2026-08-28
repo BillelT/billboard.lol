@@ -15,8 +15,10 @@ export interface CarBox {
 export const carHitState: { boxes: CarBox[] } = { boxes: [] };
 export const carClickQueue: number[] = [];
 
-// Tap target size around a car's published (x, z) — generous enough to catch
-// a car mid-bump without dragging in the road's neighbouring lane.
-export const CAR_HIT_HALF_X = 1.7;
-export const CAR_HIT_HALF_Z = 1.05;
-export const CAR_HIT_TOP = 3;
+// Tap target size around a car's published (x, z) — deliberately much bigger
+// than the car itself (roughly half-width 1.25, half-depth 0.6): cars are
+// small, fast, and moving, so the box is padded out generously rather than
+// hugging the model, or a tap next to the car just misses.
+export const CAR_HIT_HALF_X = 3;
+export const CAR_HIT_HALF_Z = 1.8;
+export const CAR_HIT_TOP = 3.5;

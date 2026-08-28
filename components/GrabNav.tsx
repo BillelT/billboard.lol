@@ -13,6 +13,7 @@ import { carHitState, carClickQueue, CAR_HIT_HALF_X, CAR_HIT_HALF_Z, CAR_HIT_TOP
 const FRICTION = 0.94; // fling decay per frame
 const MIN_FLING = 0.05; // px/frame under which the fling stops
 const BOX_DEPTH = 3; // how forgiving a click is along the road's depth axis
+const CLICK_SLOP = 6; // px of total travel still counted as a tap, not a drag
 
 // The Scene chunk (dynamically imported, see Experience.tsx) already loads
 // three — this just grabs a reference to the same module instead of statically
@@ -111,6 +112,7 @@ export default function GrabNav() {
     if (!el) return;
     let pointerId: number | null = null;
     let lastX = 0;
+    let downX = 0;
     let velocity = 0; // page px per frame
     let raf = 0;
     let moved = false;
@@ -180,6 +182,7 @@ export default function GrabNav() {
       if (e.button !== 0 && e.pointerType === "mouse") return;
       pointerId = e.pointerId;
       lastX = e.clientX;
+      downX = e.clientX;
       velocity = 0;
       moved = false;
       cancelAnimationFrame(raf);
@@ -199,7 +202,11 @@ export default function GrabNav() {
       if (pointerId !== e.pointerId) return;
       const dx = e.clientX - lastX;
       lastX = e.clientX;
-      if (Math.abs(dx) > 0.5) moved = true;
+      // Distinguish a real drag from pointer jitter on a click by total travel
+      // since pointerdown, not a single move event's delta — a tap can easily
+      // produce one 1-2px sub-event on a high-poll-rate mouse or a trackpad,
+      // which used to be enough to misclassify the tap as a drag.
+      if (Math.abs(e.clientX - downX) > CLICK_SLOP) moved = true;
       // grab the world: pulling left drives forward down the road
       const d = -dx * gain();
       scrollBy(d);
