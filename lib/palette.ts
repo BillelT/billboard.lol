@@ -36,6 +36,10 @@ export const PAL = {
   wheel: "#2c2c30",
   window: "#3a4a5a",
 
+  // birds
+  bird: "#3d444e",
+  birdBeak: "#f2b632",
+
   // helicopter
   heliBody: "#e4572e",
   heliRoof: "#f7f7f4",

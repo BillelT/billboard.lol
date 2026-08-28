@@ -194,3 +194,41 @@ export function makeCarGeometry(): THREE.BufferGeometry {
   parts.forEach((p) => p.dispose());
   return merged;
 }
+
+// Bird faces +X (the direction it flies); wings are separate meshes rooted at
+// the body so they can flap on their own.
+export function makeBirdBodyGeometry(): THREE.BufferGeometry {
+  const parts = [
+    paint(place(box(1.0, 0.26, 0.26), 0, 0, 0), PAL.bird),
+    paint(place(box(0.34, 0.22, 0.22), 0.6, 0.05, 0), PAL.bird),
+    paint(place(box(0.26, 0.09, 0.09), 0.85, 0.05, 0), PAL.birdBeak),
+    paint(place(box(0.5, 0.08, 0.34), -0.66, 0.03, 0), PAL.bird),
+  ];
+  const merged = mergeGeometries(parts, false)!;
+  parts.forEach((p) => p.dispose());
+  return merged;
+}
+
+// One swept-back wing, rooted at the origin and reaching along +Z, drawn as a
+// flat quad plus its mirror so it stays visible from below.
+export function makeBirdWingGeometry(): THREE.BufferGeometry {
+  const quad = [
+    [-0.34, 0, 0],
+    [0.3, 0, 0],
+    [-0.02, 0.02, 1.5],
+    [-0.24, 0.02, 1.5],
+  ] as const;
+  const tris = [
+    [0, 1, 2],
+    [0, 2, 3],
+  ];
+  const pos: number[] = [];
+  for (const [a, b, c] of tris) {
+    for (const i of [a, b, c]) pos.push(...quad[i]);
+    for (const i of [c, b, a]) pos.push(...quad[i]); // back face
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.computeVertexNormals();
+  return paint(geo, PAL.bird);
+}
