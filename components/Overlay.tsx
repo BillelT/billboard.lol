@@ -253,7 +253,7 @@ export default function Overlay() {
       <header className="masthead">
         <a className="wordmark" href="/">
           <span className="wordmark__sign" aria-hidden="true" />
-          billboard<em>.lol</em>
+          bidboard<em>.lol</em>
         </a>
       </header>
 
