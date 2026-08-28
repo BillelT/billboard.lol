@@ -47,6 +47,16 @@ export function computeLayout(billboards: Billboard[]): SceneLayout {
   return { items, startX: -90, endX: endX + 40 };
 }
 
+// Roughly how far the camera travels: the dive in from the aerial opening plus
+// the run along the billboard line. The page is sized from this so one scroll
+// tick always buys the same amount of road, whatever the ranking looks like.
+export function driveLength(layout: SceneLayout): number {
+  const first = layout.items[0];
+  const from = first ? first.x - first.panelW * 0.6 : 0;
+  const opening = first ? first.totalH * 1.1 : 0;
+  return Math.max(120, layout.endX + 12 - from + opening);
+}
+
 export const fmtUSD = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 

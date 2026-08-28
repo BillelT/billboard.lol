@@ -48,7 +48,7 @@ export default function Scene() {
       {/* Haze starts close and climbs slowly all the way out. Exponential fog
           did the opposite — nothing nearby, then a sharp wall — and a short
           linear range put a visible band where it topped out. */}
-      <fog attach="fog" args={[PAL.fog, 80, 1500]} />
+      <fog attach="fog" args={[PAL.fog, debugState.fog.near, debugState.fog.far]} />
       <SkyDome />
       <Lights />
       <Ground layout={layout} />

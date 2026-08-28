@@ -2,13 +2,14 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
-import { computeLayout, fmtFeet, fmtUSD } from "@/lib/layout";
+import { computeLayout, driveLength, fmtFeet, fmtUSD } from "@/lib/layout";
 import { brandColorFor } from "@/lib/palette";
 import { scrollState } from "@/lib/scrollState";
 import { usePresence } from "@/lib/usePresence";
 import { sceneAudio } from "@/lib/audio";
 import { perfEnabled } from "@/lib/perfState";
-import { debugEnabled } from "@/lib/debugState";
+import { debugEnabled, debugState } from "@/lib/debugState";
+import { useRebuild } from "./useRebuild";
 import PerfPanel from "./PerfPanel";
 
 const DebugPanel = dynamic(() => import("./DebugPanel"), { ssr: false });
@@ -61,6 +62,9 @@ export default function Overlay() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // the debug panel can retune the scroll length live
+  useRebuild();
 
   const [perf, setPerf] = useState(false);
   const [debug, setDebug] = useState(false);
@@ -147,13 +151,24 @@ export default function Overlay() {
     }
   };
 
-  // scroll length grows with the ranking but sub-linearly, so 200 billboards
-  // stay a long drive rather than an endless one
-  const pages = Math.min(60, 6 + layout.items.length * 0.55);
+  // The page is exactly as long as the drive is: a fixed number of scroll pixels
+  // per unit of road. Before, a fixed number of viewport heights per billboard
+  // meant the same wheel tick bought very different amounts of world, and the
+  // opening barely moved at all.
+  const road = driveLength(layout);
+  const scrollPx = Math.round(road * debugState.motion.scrollPerUnit);
+
+  // a new billboard lengthens the page, so re-derive progress from the new
+  // height and hand the grab surface the road it now has to cover
+  useEffect(() => {
+    scrollState.roadLength = road;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    scrollState.target = max > 0 ? window.scrollY / max : 0;
+  }, [road, scrollPx]);
 
   return (
     <>
-      <div className="spacer" style={{ height: `${pages * 90}vh` }} />
+      <div className="spacer" style={{ height: `${scrollPx}px`, minHeight: "200vh" }} />
 
       {/* the 3D stack climbs high, so the top stays reserved for the wordmark alone */}
       <header className="masthead">
