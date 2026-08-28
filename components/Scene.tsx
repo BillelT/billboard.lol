@@ -14,6 +14,7 @@ import Decor from "./Decor";
 import Clouds from "./Clouds";
 import Cars from "./Cars";
 import Helicopter from "./Helicopter";
+import Birds from "./Birds";
 import CameraRig from "./CameraRig";
 import PerfProbe from "./PerfProbe";
 import AdaptiveDpr from "./AdaptiveDpr";
@@ -58,6 +59,7 @@ export default function Scene() {
       <Clouds layout={layout} />
       <Cars layout={layout} />
       <Helicopter layout={layout} />
+      <Birds layout={layout} />
       <CameraRig layout={layout} />
       <AdaptiveDpr max={MAX_DPR} />
       {perf && <PerfProbe />}
