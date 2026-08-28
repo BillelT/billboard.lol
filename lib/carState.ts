@@ -29,4 +29,4 @@ export const CAR_HIT_TOP = 3.5;
 // billboard or a different car keeps bumping the one already locked on,
 // wherever exactly it lands.
 export const stickyCar: { index: number | null; until: number } = { index: null, until: 0 };
-export const STICKY_MS = 550;
+export const STICKY_MS = 700;

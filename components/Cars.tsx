@@ -19,7 +19,7 @@ const BASE_IMPULSE = 4.2;
 const HEAT_PER_CLICK = 1;
 const HEAT_IMPULSE = 0.85; // extra jump velocity per point of heat
 const HEAT_COOL_RATE = 2; // heat/sec lost while not clicking
-const EXPLODE_AT = 7; // heat needed to blow up
+const EXPLODE_AT = 4; // heat needed to blow up
 const RESPAWN_TIME = 1.15; // seconds a car stays hidden after exploding
 
 const DUST_POOL = 36;
