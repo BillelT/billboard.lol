@@ -41,7 +41,9 @@ Copy `.env.example` to `.env.local` and fill in:
 
 On an existing database, run
 [`supabase/migrations/0001_site_metadata.sql`](./supabase/migrations/0001_site_metadata.sql)
-to add the scraped site columns.
+to add the scraped site columns, and
+[`supabase/migrations/0002_site_visits.sql`](./supabase/migrations/0002_site_visits.sql)
+to add the total-visits counter behind the "visitors since launch" gauge.
 
 ## What a billboard shows
 
