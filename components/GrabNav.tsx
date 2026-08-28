@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { scrollState } from "@/lib/scrollState";
 import { debugState } from "@/lib/debugState";
 
 // Horizontal drag on the scene = another way to drive down the highway.
@@ -23,14 +22,11 @@ export default function GrabNav() {
 
     const scrollMax = () => document.documentElement.scrollHeight - window.innerHeight;
 
-    // Page pixels per pixel dragged. Derived rather than fixed: a drag across the
-    // full screen width always covers the same stretch of road, so grabbing feels
-    // identical whether the ranking is three billboards long or two hundred.
-    const gain = () => {
-      const road = Math.max(1, scrollState.roadLength);
-      const width = Math.max(1, window.innerWidth);
-      return (debugState.motion.grabSpan / road) * (scrollMax() / width);
-    };
+    // Page pixels per pixel dragged. The page is now exactly as long as the road,
+    // so one page pixel is a fixed distance of tarmac whatever the ranking — which
+    // means a straight 1:1 with the scroll is both the simplest mapping and the
+    // one that keeps a drag feeling the same at 3 billboards and at 200.
+    const gain = () => debugState.motion.grab;
 
     const scrollBy = (d: number) => {
       const next = Math.min(scrollMax(), Math.max(0, window.scrollY + d));

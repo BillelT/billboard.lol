@@ -53,10 +53,10 @@ export const debugState = {
     // Page pixels of scroll per world unit of road. Sets how much of the drive
     // one wheel tick buys — lower means the scene answers a small scroll.
     scrollPerUnit: 8,
-    // World units the road moves when a drag crosses the whole screen width.
-    // ~100 is 1:1 with the billboard plane; a little past that because the
-    // ground under the cursor is nearer than the signs it runs to.
-    grabSpan: 130,
+    // Page pixels of scroll per pixel dragged. 1 makes a drag exactly as strong
+    // as a scroll of the same distance, which is the whole point: the two ways
+    // of driving should not feel like different gears.
+    grab: 1,
   },
 };
 
@@ -153,12 +153,12 @@ export const DEBUG_GROUPS: { group: string; fields: DebugField[] }[] = [
         hint: "page pixels of scroll per unit of road — lower means less scrolling for the same drive",
       },
       {
-        path: "motion.grabSpan",
-        label: "grab reach",
-        min: 20,
-        max: 400,
-        step: 5,
-        hint: "units of road a drag across the full screen width covers",
+        path: "motion.grab",
+        label: "grab strength",
+        min: 0.2,
+        max: 3,
+        step: 0.05,
+        hint: "drag pull relative to the scroll — 1 makes a drag and a scroll of the same distance identical",
       },
     ],
   },

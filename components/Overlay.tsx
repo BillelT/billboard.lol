@@ -158,13 +158,11 @@ export default function Overlay() {
   const road = driveLength(layout);
   const scrollPx = Math.round(road * debugState.motion.scrollPerUnit);
 
-  // a new billboard lengthens the page, so re-derive progress from the new
-  // height and hand the grab surface the road it now has to cover
+  // a new billboard lengthens the page, so re-derive progress from the new height
   useEffect(() => {
-    scrollState.roadLength = road;
     const max = document.documentElement.scrollHeight - window.innerHeight;
     scrollState.target = max > 0 ? window.scrollY / max : 0;
-  }, [road, scrollPx]);
+  }, [scrollPx]);
 
   return (
     <>
