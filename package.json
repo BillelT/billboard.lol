@@ -1,5 +1,5 @@
 {
-  "name": "billboard-lol",
+  "name": "bidboard-lol",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",

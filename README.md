@@ -1,4 +1,4 @@
-# billboard.lol
+# bidboard.lol
 
 A low-poly American highway where companies bid for billboards. Pay more, get
 bigger, get seen first. A satire, obviously.
@@ -11,7 +11,7 @@ bigger, get seen first. A satire, obviously.
 - **The look** (à la topfloor.company): low/mid-poly, one closed palette, all
   geometry procedural and vertex-colored — zero downloaded assets.
 
-See [`billboard-brief.md`](./billboard-brief.md) for the full brief.
+See [`bidboard-brief.md`](./bidboard-brief.md) for the full brief.
 
 ## Run it
 

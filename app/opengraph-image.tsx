@@ -5,7 +5,7 @@ import { getRanking } from "@/lib/ranking.server";
 import { fmtUSD } from "@/lib/layout";
 import { PAL } from "@/lib/palette";
 
-export const alt = "The current billboard.lol podium";
+export const alt = "The current bidboard.lol podium";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const revalidate = 30;
@@ -74,7 +74,7 @@ export default async function Image() {
               color: "#1f2733",
             }}
           >
-            billboard.lol
+            bidboard.lol
           </div>
           <div
             style={{
