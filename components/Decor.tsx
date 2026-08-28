@@ -23,6 +23,13 @@ const AHEAD = 16; // reaches the fog wall, so the world never visibly runs out
 const CELLS = BEHIND + AHEAD + 1;
 const MAX_DENSITY = 3; // instance pools are sized for the debug panel's ceiling
 
+// How far past the camera decor can ever be placed. The camera parks at
+// layout.endX + 12 once the drive is over, so Road and Ground need to reach at
+// least this far past layout.endX too — otherwise the pavement and grass end
+// hundreds of units before the tree line does, and the seam is left in full
+// view instead of behind fog.
+export const DECOR_AHEAD_REACH = (AHEAD + 1) * CHUNK;
+
 interface Kind {
   geometry: THREE.BufferGeometry;
   perCell: number;
