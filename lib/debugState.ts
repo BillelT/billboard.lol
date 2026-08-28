@@ -49,8 +49,8 @@ export const debugState = {
   // right where the world actually ends, instead of relying on distance fog
   // alone — which stays too faint that close in to hide the seam.
   edgeFog: {
-    start: 150, // distance past layout.startX/endX where the fade begins
-    range: 500, // distance beyond that until fully faded
+    start: 40, // distance past layout.startX/endX where the fade begins
+    range: 410, // distance beyond that until fully faded
   },
   camera: {
     fov: 45,
