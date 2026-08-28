@@ -12,9 +12,10 @@ import { BILL_Z, fmtUSD, type SceneLayout } from "@/lib/layout";
 import { vertexColorMat } from "./materials";
 import { placementOf, sceneAudio } from "@/lib/audio";
 
-const BANNER_W = 18;
-const BANNER_H = 3;
+const BANNER_W = 13;
+const BANNER_H = 2.2;
 const BANNER_SEG = 32;
+const HELI_SCALE = 0.82;
 
 // Ad plane of the aerial section: a low-poly chopper towing a banner that
 // advertises whoever currently holds #1. It loops across the giant billboards,
@@ -48,17 +49,18 @@ export default function Helicopter({ layout }: { layout: SceneLayout }) {
     [geos.banner],
   );
 
-  // Flies between the camera and the #1 billboard, just above its top edge, so
-  // it reads against open sky instead of disappearing behind the panel. It only
-  // crosses the aerial opening; the camera has descended past it by rank 3.
+  // Flies past the #1 billboard, just above its top edge, so it reads against
+  // open sky instead of disappearing behind the panel — set a little behind the
+  // billboard line rather than between it and the camera. It only crosses the
+  // aerial opening; the camera has descended past it by rank 3.
   const path = useMemo(() => {
     const first = layout.items[0];
     const h = first?.totalH ?? 40;
     return {
       startX: (first?.x ?? 0) - 150,
       spanX: 300,
-      y: h * 0.62,
-      z: BILL_Z + h * 0.95,
+      y: h * 0.7,
+      z: BILL_Z - h * 0.15,
       speed: 11,
     };
   }, [layout]);
@@ -100,7 +102,7 @@ export default function Helicopter({ layout }: { layout: SceneLayout }) {
   });
 
   return (
-    <group ref={group}>
+    <group ref={group} scale={HELI_SCALE}>
       <mesh geometry={geos.body} material={vertexColorMat} castShadow />
       <mesh ref={rotor} geometry={geos.main} material={vertexColorMat} position={[0, 1.45, 0]} />
       <mesh
@@ -118,7 +120,7 @@ export default function Helicopter({ layout }: { layout: SceneLayout }) {
       <mesh
         ref={banner}
         geometry={geos.banner}
-        position={[-17.1, 0.05, 0]}
+        position={[-12.1, 0.05, 0]}
         castShadow
       >
         <meshStandardMaterial map={texture} side={THREE.DoubleSide} roughness={0.9} />
