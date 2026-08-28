@@ -17,6 +17,7 @@
   /* accents */
   --asphalt: #262b33;
   --marking: #f2b632; /* road-marking yellow */
+  --marking-light: #f6c65c;
   --marking-deep: #d99a12;
   --signal: #17966a; /* live green */
 
@@ -285,6 +286,16 @@ body {
   color: var(--ink);
   text-decoration: none;
   cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+.gauge--sig:hover {
+  background: var(--paper);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--lift-2);
+}
+.gauge--sig:active {
+  transform: translate(1px, 1px);
+  box-shadow: var(--lift-press);
 }
 .gauge__avatar {
   width: 20px;
@@ -586,7 +597,7 @@ body {
     background 0.12s ease;
 }
 .cta:hover:not(:disabled) {
-  background: var(--marking-deep);
+  background: var(--marking-light);
   transform: translate(-1px, -1px);
   box-shadow: var(--lift-2);
 }
