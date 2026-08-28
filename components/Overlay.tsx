@@ -59,6 +59,7 @@ export default function Overlay() {
   const [sound, setSound] = useState(false);
   const dockRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLDivElement>(null);
+  const catMeasureRef = useRef<HTMLDivElement>(null);
 
   // publish the dock height so the gauge rail and the hint always clear it
   useEffect(() => {
@@ -112,6 +113,15 @@ export default function Overlay() {
       off();
       disarm();
     };
+  }, []);
+
+  // trigger and dropdown share one width: the widest category label, so the
+  // panel never looks narrower or wider than the button that opens it
+  useEffect(() => {
+    const el = catMeasureRef.current;
+    if (!el || !catRef.current) return;
+    const w = Math.max(0, ...Array.from(el.children).map((c) => (c as HTMLElement).offsetWidth));
+    if (w) catRef.current.style.setProperty("--cat-w", `${Math.ceil(w)}px`);
   }, []);
 
   // close the category dropdown on an outside click
@@ -282,6 +292,7 @@ export default function Overlay() {
                 <span className="meter__currency">$</span>
                 <input
                   className="meter__input"
+                  style={{ width: `${String(amount).length}ch` }}
                   type="number"
                   min={1}
                   max={100000}
@@ -322,6 +333,15 @@ export default function Overlay() {
                 {category ?? "Choose a category"}
                 <span className="cat__chevron" aria-hidden="true">▾</span>
               </button>
+              {/* off-screen clones of the trigger, one per label, just to measure the widest */}
+              <div ref={catMeasureRef} aria-hidden="true" className="cat__measure">
+                {["Choose a category", ...CATEGORIES].map((c) => (
+                  <button key={c} type="button" className="cat__trigger">
+                    {c}
+                    <span className="cat__chevron" aria-hidden="true">▾</span>
+                  </button>
+                ))}
+              </div>
               {catOpen && (
                 <div className="cat__panel" role="listbox">
                   <input
