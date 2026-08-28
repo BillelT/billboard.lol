@@ -60,7 +60,7 @@ export default function Helicopter({ layout }: { layout: SceneLayout }) {
       startX: (first?.x ?? 0) - 150,
       spanX: 300,
       y: h * 0.7,
-      z: BILL_Z - h * 0.15,
+      z: BILL_Z - h * 0.4,
       speed: 11,
     };
   }, [layout]);
