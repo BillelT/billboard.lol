@@ -27,3 +27,8 @@ export const SEED: Billboard[] = [2600, 1450, 880, 560, 370, 240, 155, 90, 55, 2
     placeholder: true,
   }),
 );
+
+// The two placeholder slots at rank 1 and rank 2 are overlaid with these real
+// domains (favicon, SEO copy, colour — fetched live, see withAnchors below)
+// instead of staying empty, so the road never opens on a totally bare ranking.
+export const ANCHOR_DOMAINS = ["billeltighidet.fr", "lacompagniedesinternetsbordelaise.fr"];

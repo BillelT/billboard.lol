@@ -2,7 +2,18 @@
 import { useEffect } from "react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
+import { ANCHOR_DOMAINS, SEED } from "@/lib/seed";
 import type { Billboard } from "@/lib/types";
+
+interface SiteInfoResponse {
+  domain: string;
+  url: string;
+  title: string | null;
+  description: string | null;
+  iconUrl: string | null;
+  color: string;
+  error?: string;
+}
 
 // When Supabase is configured: load the current ranking and refetch on every new
 // payment (realtime insert) so ranks re-sort live in the scene.
@@ -17,7 +28,39 @@ export default function DataSync() {
       );
       return;
     }
-    if (!supabaseConfigured()) return;
+    if (!supabaseConfigured()) {
+      // no backend: overlay the rank 1 / rank 2 placeholders with the real,
+      // live-fetched anchor domains instead of leaving every slot empty.
+      let cancelled = false;
+      Promise.all(
+        ANCHOR_DOMAINS.map((d) =>
+          fetch(`/api/site-info?domain=${encodeURIComponent(d)}`)
+            .then((r) => (r.ok ? (r.json() as Promise<SiteInfoResponse>) : null))
+            .catch(() => null),
+        ),
+      ).then((anchors) => {
+        if (cancelled || anchors.every((a) => !a)) return;
+        setBillboards(
+          SEED.map((b, i) => {
+            const info = anchors[i];
+            if (!info || info.error) return b;
+            return {
+              ...b,
+              name: info.domain,
+              url: info.url,
+              color: info.color,
+              title: info.title,
+              description: info.description,
+              iconUrl: info.iconUrl,
+              placeholder: false,
+            };
+          }),
+        );
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
 
     let channel: { unsubscribe: () => void } | null = null;
     let cancelled = false;
