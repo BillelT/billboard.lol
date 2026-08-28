@@ -251,10 +251,10 @@ export default function Overlay() {
 
       {/* the 3D stack climbs high, so the top stays reserved for the wordmark alone */}
       <header className="masthead">
-        <a className="wordmark" href="/">
+        <button type="button" className="wordmark" aria-label="bidboard.lol">
           <span className="wordmark__sign" aria-hidden="true" />
           bidboard<em>.lol</em>
-        </a>
+        </button>
       </header>
 
       <aside className="gauges">
