@@ -13,20 +13,19 @@ export function makeStressRanking(n: number): Billboard[] {
   }));
 }
 
-// Fallback ranking shown until Supabase has real data: empty, unclaimed slots
-// rather than fictional companies. The staggered amounts only exist to stagger
-// the panel sizes the way a real ranking would (see computeLayout) and to seed
-// the "biggest billboard for $…" starting price — no fake advertiser is shown.
-export const SEED: Billboard[] = [2600, 1450, 880, 560, 370, 240, 155, 90, 55, 28, 12, 5].map(
-  (amount, i) => ({
-    id: `empty-${i}`,
-    name: `empty-${i}`,
-    url: "",
-    color: "#fffaf0",
-    amount,
-    placeholder: true,
-  }),
-);
+// Fallback ranking shown until Supabase has real data: the two real anchors
+// below plus exactly one empty, unclaimed slot — not a padded-out ranking of
+// fictional companies. The staggered amounts only exist to stagger the panel
+// sizes the way a real ranking would (see computeLayout) and to seed the
+// "biggest billboard for $…" starting price.
+export const SEED: Billboard[] = [2600, 1450, 20].map((amount, i) => ({
+  id: `empty-${i}`,
+  name: `empty-${i}`,
+  url: "",
+  color: "#fffaf0",
+  amount,
+  placeholder: true,
+}));
 
 // The two placeholder slots at rank 1 and rank 2 are overlaid with these real
 // domains (favicon, SEO copy, colour — fetched live, see withAnchors below)
