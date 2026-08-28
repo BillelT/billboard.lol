@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
-const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
 // Same family as the OG card and the 3D billboard faces.
 const outfit = localFont({
