@@ -186,7 +186,7 @@ export function makeFaceTexture(opts: {
 
   // domain name, auto-fit then hard-truncated so it never runs into the rank
   const nameX = tx + tile + 48;
-  const nameMaxW = LW - nameX - 380;
+  const nameMaxW = LW - nameX - 300;
   let size = 96;
   ctx.font = font(700, size);
   while (size > 34 && ctx.measureText(opts.name).width > nameMaxW) {
@@ -210,7 +210,12 @@ export function makeFaceTexture(opts: {
   ctx.fillStyle = "rgba(255,255,255,0.78)";
   const taglineLineH = 42;
   const taglineY = LH / 2 + 46;
-  for (const [i, line] of wrapLines(ctx, tagline, nameMaxW, 3).entries()) {
+
+  // 250 laisse moins de marge à droite que les 380 du titre. 
+  // Vous pouvez réduire ce chiffre (ex: 200, 150) si vous voulez encore plus de largeur.
+  const descriptionMaxW = LW - nameX - 182;
+  
+  for (const [i, line] of wrapLines(ctx, tagline, descriptionMaxW, 3).entries()) {
     ctx.fillText(line, nameX, taglineY + i * taglineLineH);
   }
 
