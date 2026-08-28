@@ -5,8 +5,12 @@ import { PAL } from "@/lib/palette";
 import { groundHeight, groundRows, groundTint } from "@/lib/terrain";
 import type { SceneLayout } from "@/lib/layout";
 import { useRebuild } from "./useRebuild";
+import { DECOR_AHEAD_REACH } from "./Decor";
 
 const COL_SPACING = 40;
+// Matches Road's own buffer: the grass has to reach as far as decor is ever
+// drawn, or trees end up standing past the edge of the ground mesh itself.
+const GROUND_BUFFER = DECOR_AHEAD_REACH + 100;
 
 // Vertex-colored grass on a non-uniform grid: rows are tight near the road,
 // where props stand and the relief reads, and stretch out into the fog. That
@@ -15,7 +19,7 @@ const COL_SPACING = 40;
 export default function Ground({ layout }: { layout: SceneLayout }) {
   const rebuild = useRebuild();
   const geometry = useMemo(() => {
-    const width = layout.endX - layout.startX + 1400;
+    const width = layout.endX - layout.startX + GROUND_BUFFER * 2;
     const cx = (layout.startX + layout.endX) / 2;
     const rows = groundRows();
     const colCount = THREE.MathUtils.clamp(Math.round(width / COL_SPACING), 28, 160);
