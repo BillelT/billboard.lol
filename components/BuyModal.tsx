@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { fmtUSD } from "@/lib/layout";
 import { CATEGORIES } from "@/lib/categories";
@@ -107,7 +108,10 @@ export default function BuyModal() {
         </form>
 
         {error && <p className="modal__error">{error}</p>}
-        <p className="modal__footnote">Every dollar makes your billboard bigger. No refunds.</p>
+        <p className="modal__footnote">
+          Every dollar makes your billboard bigger. No refunds. By paying, you agree to our{" "}
+          <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>.
+        </p>
       </div>
     </div>
   );

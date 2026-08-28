@@ -610,6 +610,20 @@ body {
   cursor: wait;
 }
 
+.dock__legal {
+  font-size: 11px;
+  color: var(--ink-3);
+  text-align: center;
+}
+.dock__legal a {
+  color: var(--ink-2);
+  text-decoration-color: var(--marking-deep);
+  text-underline-offset: 2px;
+}
+.dock__legal a:hover {
+  color: var(--ink);
+}
+
 /* live preview of the billboard being bought: real favicon, real SEO line,
    background colour picked from the icon */
 .peek {
@@ -985,4 +999,102 @@ body {
   font-weight: 400;
   color: var(--ink-3);
   text-align: center;
+}
+.modal__footnote a {
+  color: var(--ink-2);
+  text-decoration-color: var(--marking-deep);
+  text-underline-offset: 2px;
+}
+.modal__footnote a:hover {
+  color: var(--ink);
+}
+
+/* ---------------- legal pages: real, scrolling paper — no WebGL, no scrim ---------------- */
+.legal {
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+.legal__header {
+  display: flex;
+  justify-content: center;
+  padding: 18px 16px 0;
+}
+.legal__header .wordmark {
+  cursor: pointer;
+}
+
+.legal__main {
+  display: flex;
+  justify-content: center;
+  padding: 32px 16px 96px;
+}
+
+.legal__doc {
+  width: 100%;
+  max-width: 680px;
+  background: var(--paper-2);
+  border: var(--edge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift-2);
+  padding: 40px clamp(20px, 5vw, 48px);
+}
+
+.legal__doc h1 {
+  font-size: clamp(28px, 5vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.legal__updated {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.legal__doc h2 {
+  margin-top: 32px;
+  margin-bottom: 4px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.legal__doc p {
+  margin-top: 12px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.legal__doc ul {
+  margin-top: 12px;
+  padding-left: 22px;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.legal__doc li {
+  margin-top: 6px;
+}
+
+.legal__doc strong {
+  color: var(--ink);
+}
+
+.legal__doc a {
+  color: var(--ink);
+  text-decoration-color: var(--marking-deep);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+.legal__doc a:hover {
+  color: var(--marking-deep);
+}
+
+.legal__see-also {
+  margin-top: 40px;
+  padding-top: 16px;
+  border-top: var(--edge-soft);
+  font-size: 13px;
 }

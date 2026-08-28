@@ -1,5 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { computeLayout, driveLength, fmtFeet, fmtUSD } from "@/lib/layout";
@@ -419,6 +420,11 @@ export default function Overlay() {
               {busy ? "…" : "Plant my billboard"}
             </button>
           </form>
+
+          <p className="dock__legal">
+            By paying, you agree to our <Link href="/terms">Terms</Link> and{" "}
+            <Link href="/privacy">Privacy Policy</Link>.
+          </p>
 
           {/* what the money buys, read off the domain itself */}
           {preview.state === "loading" && (
