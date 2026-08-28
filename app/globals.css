@@ -289,7 +289,10 @@ body {
   color: var(--ink);
   text-decoration: none;
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.12s ease;
 }
 .gauge--sig:hover {
   background: var(--paper);
@@ -959,7 +962,9 @@ body {
 }
 .modal__input:focus,
 .modal__select:focus {
-  box-shadow: inset 0 2px 0 rgba(17, 21, 28, 0.05), 0 0 0 3px rgba(242, 182, 50, 0.55);
+  box-shadow:
+    inset 0 2px 0 rgba(17, 21, 28, 0.05),
+    0 0 0 3px rgba(242, 182, 50, 0.55);
 }
 .modal__select {
   cursor: pointer;
