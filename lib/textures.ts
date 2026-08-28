@@ -23,12 +23,47 @@ function uiFont(): string {
   return stack || 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 }
 
-// binary-search-free trim: SEO descriptions are one short line on a panel
+// binary-search-free trim: for text that has to stay on one line
 function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
   if (ctx.measureText(text).width <= maxW) return text;
   let t = text;
   while (t.length > 1 && ctx.measureText(`${t}…`).width > maxW) t = t.slice(0, -1);
   return `${t.trimEnd()}…`;
+}
+
+// Word-wraps onto up to maxLines lines instead of clipping to one — the SEO
+// description gets room to breathe before it's cut off. Whatever's left past
+// the last line is folded into it and ellipsized there, same as a single-line
+// clip would, so it never spills past maxW (and never into the rank/amount
+// column, since callers pass the same maxW that keeps that column clear).
+function wrapLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxW: number,
+  maxLines: number,
+): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const all: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(test).width > maxW) {
+      all.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) all.push(line);
+
+  if (all.length <= maxLines) return all;
+  const shown = all.slice(0, maxLines);
+  shown[maxLines - 1] = ellipsize(
+    ctx,
+    `${shown[maxLines - 1]} ${all.slice(maxLines).join(" ")}`,
+    maxW,
+  );
+  return shown;
 }
 
 function shade(hex: string, f: number): string {
@@ -168,11 +203,16 @@ export function makeFaceTexture(opts: {
   ctx.fillText(displayName, nameX, LH / 2 - 26);
   ctx.shadowColor = "transparent";
 
-  // the site's own SEO line, clipped to whatever the panel can hold
+  // the site's own SEO line, wrapped over up to 3 lines instead of clipped to
+  // one — still bounded by nameMaxW so it never runs into the rank column
   const tagline = opts.description ?? opts.title ?? "your ad, but bigger";
-  ctx.font = font(400, 36);
+  ctx.font = font(400, 34);
   ctx.fillStyle = "rgba(255,255,255,0.78)";
-  ctx.fillText(ellipsize(ctx, tagline, nameMaxW), nameX, LH / 2 + 50);
+  const taglineLineH = 42;
+  const taglineY = LH / 2 + 46;
+  for (const [i, line] of wrapLines(ctx, tagline, nameMaxW, 3).entries()) {
+    ctx.fillText(line, nameX, taglineY + i * taglineLineH);
+  }
 
   // rank + amount on the right
   ctx.textAlign = "right";
