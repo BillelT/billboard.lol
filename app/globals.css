@@ -1021,6 +1021,65 @@ body {
   color: var(--ink);
 }
 
+/* ---------------- 404 easter egg: same billboard scene, after dark ---------------- */
+.night404 {
+  position: fixed;
+  inset: 0;
+  background: #050912;
+  overflow: hidden;
+}
+.night404__canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  /* unlike .webgl on the main page, this canvas owns its own clicks — the
+     billboard face is a real react-three-fiber onClick target, not hit-tested
+     from a separate full-page drag surface (see GrabNav.tsx) */
+}
+.night404__canvas canvas {
+  display: block;
+}
+.night404 .masthead .wordmark {
+  background: rgba(19, 19, 22, 0.72);
+  color: var(--paper);
+  border-color: rgba(246, 244, 234, 0.28);
+}
+.night404 .masthead .wordmark em {
+  color: rgba(246, 244, 234, 0.6);
+}
+.night404__soundDock {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 10;
+}
+.night404__soundBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--paper);
+  background: rgba(19, 19, 22, 0.72);
+  border: 1.5px solid rgba(246, 244, 234, 0.28);
+  border-radius: var(--r-sm);
+  padding: 8px 14px;
+  cursor: pointer;
+  box-shadow: var(--lift-1);
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.night404__soundBtn:hover {
+  border-color: var(--marking);
+  color: var(--marking);
+}
+.night404__soundBtn .gauge__soundIcon {
+  width: 18px;
+  height: 18px;
+}
+
 /* ---------------- legal pages: real, scrolling paper — no WebGL, no scrim ---------------- */
 .legal {
   min-height: 100vh;
