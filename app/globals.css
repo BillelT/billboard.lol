@@ -171,8 +171,10 @@ body {
 
 .gauge {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 7px;
+  min-height: 32px;
+  box-sizing: border-box;
   font-size: 13px;
   font-weight: 400;
   color: var(--ink-2);
