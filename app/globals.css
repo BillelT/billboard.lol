@@ -178,8 +178,9 @@ body {
   align-items: center;
   gap: 8px;
   box-sizing: border-box;
+  min-height: 34px;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 600;
   color: var(--ink);
   background: var(--paper-ghost);
   border: var(--edge-soft);
@@ -188,28 +189,14 @@ body {
   padding: 6px 12px;
   box-shadow: var(--lift-1);
 }
-.gauge b {
-  font-weight: 700;
-  color: var(--ink);
-}
-.gauge__key {
-  font-size: 14px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--track-label);
-  color: var(--ink-3);
-}
 .gauge--live {
   border-left-color: var(--signal);
   color: var(--signal);
 }
-.gauge--live b {
-  color: var(--signal);
-}
 .gauge__dot {
   position: relative;
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--signal);
   align-self: center;
@@ -237,9 +224,6 @@ body {
   background: var(--paper);
   padding-right: 96px;
 }
-.gauge--sound:active {
-  background: rgba(17, 21, 28, 0.07);
-}
 .gauge--sound:has(.gauge__soundBtn[aria-pressed="true"]) {
   border-left-color: var(--signal);
 }
@@ -253,6 +237,11 @@ body {
   border: 0;
   padding: 0;
   cursor: pointer;
+}
+.gauge__soundIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 .gauge__volume {
   position: absolute;
@@ -272,6 +261,9 @@ body {
   opacity: 1;
   pointer-events: auto;
 }
+.gauge__volume:active {
+  filter: brightness(0.92);
+}
 
 .gauge--sig {
   border-left-color: var(--marking);
@@ -279,12 +271,9 @@ body {
   text-decoration: none;
   cursor: pointer;
 }
-.gauge--sig:hover {
-  opacity: 0.75;
-}
 .gauge__avatar {
-  width: 15px;
-  height: 15px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -698,7 +687,6 @@ body {
     right: 18px;
     gap: 6px;
   }
-  .gauge__key { display: none; }
   .gauge--sig, .hint { display: none; }
   .dock__inner { gap: 10px; padding: 14px 14px 12px; }
   .claim { flex-wrap: wrap; }
