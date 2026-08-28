@@ -60,7 +60,7 @@ function hitTest(clientX: number, clientY: number) {
   let best = null as (typeof interactionState.targets)[number] | null;
   let bestDist = Infinity;
   for (const t of interactionState.targets) {
-    hitBox.min.set(t.x - t.panelW / 2, 0, BILL_Z - BOX_DEPTH);
+    hitBox.min.set(t.x - t.panelW / 2, t.poleH, BILL_Z - BOX_DEPTH);
     hitBox.max.set(t.x + t.panelW / 2, t.poleH + t.panelH, BILL_Z + BOX_DEPTH);
     const hit = raycaster.ray.intersectBox(hitBox, hitPoint);
     if (!hit) continue;
