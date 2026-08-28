@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   DEBUG_GROUPS,
   bumpRebuild,
@@ -15,6 +15,12 @@ export default function DebugPanel() {
   const [, force] = useState(0);
   const [open, setOpen] = useState(true);
   const [copied, setCopied] = useState(false);
+  // Dragging moves the panel off its default corner — off by default (null),
+  // set once the header is grabbed. Kept as plain left/top px rather than a
+  // transform so it composes with the panel's own `resize: both`.
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
 
   const update = (field: DebugField, value: number | string) => {
     setByPath(field.path, value);
@@ -28,9 +34,35 @@ export default function DebugPanel() {
     setTimeout(() => setCopied(false), 1600);
   };
 
+  const onHeadDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // let the open/close and copy buttons keep their own click behavior
+    if ((e.target as HTMLElement).closest("button")) return;
+    const rect = panelRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    drag.current = { startX: e.clientX, startY: e.clientY, originX: rect.left, originY: rect.top };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onHeadMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag.current) return;
+    const { startX, startY, originX, originY } = drag.current;
+    setPos({
+      x: Math.max(0, originX + (e.clientX - startX)),
+      y: Math.max(0, originY + (e.clientY - startY)),
+    });
+  };
+
+  const onHeadUp = () => {
+    drag.current = null;
+  };
+
   return (
-    <div className={`dbg ${open ? "" : "dbg-collapsed"}`}>
-      <div className="dbg-head">
+    <div
+      ref={panelRef}
+      className={`dbg ${open ? "" : "dbg-collapsed"}`}
+      style={pos ? { left: pos.x, top: pos.y } : undefined}
+    >
+      <div className="dbg-head" onPointerDown={onHeadDown} onPointerMove={onHeadMove} onPointerUp={onHeadUp}>
         <button onClick={() => setOpen((o) => !o)}>{open ? "▾" : "▸"} debug</button>
         {open && <button onClick={copy}>{copied ? "copied ✓" : "copy values"}</button>}
       </div>

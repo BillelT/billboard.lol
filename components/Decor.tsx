@@ -113,6 +113,7 @@ export default function Decor({ layout }: { layout: SceneLayout }) {
 
   const rebuildCells = useMemo(
     () => (centerCell: number) => {
+      const { start: edgeStart, range: edgeRange } = debugState.edgeFog;
       for (let ki = 0; ki < kinds.length; ki++) {
         const kind = kinds[ki];
         const mesh = meshes[ki];
@@ -126,6 +127,16 @@ export default function Decor({ layout }: { layout: SceneLayout }) {
             // stable per (cell, kind, slot) so the world never reshuffles
             const seed = (c * 73856093) ^ (ki * 19349663) ^ (slot * 83492791);
             kind.place(mulberry32(seed >>> 0), c * CHUNK, dummy);
+            // shrink to nothing past each end of the ranking, so the tree
+            // line fades out where the world actually ends instead of
+            // stopping abruptly in full view
+            const distPastEdge = Math.max(
+              0,
+              dummy.position.x - layout.endX,
+              layout.startX - dummy.position.x,
+            );
+            const edgeT = THREE.MathUtils.smoothstep(distPastEdge, edgeStart, edgeStart + edgeRange);
+            if (edgeT > 0) dummy.scale.multiplyScalar(1 - edgeT);
             dummy.updateMatrix();
             mesh.setMatrixAt(n++, dummy.matrix);
           }
@@ -134,7 +145,7 @@ export default function Decor({ layout }: { layout: SceneLayout }) {
         mesh.instanceMatrix.needsUpdate = true;
       }
     },
-    [kinds, meshes, dummy],
+    [kinds, meshes, dummy, layout.startX, layout.endX],
   );
 
   // seed the pool where the camera opens, and re-seed when a debug value moves

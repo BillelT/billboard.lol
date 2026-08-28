@@ -43,6 +43,15 @@ export const debugState = {
     density: 2.1,
     treeScale: 1.25,
   },
+  // A second, position-based fade layered on top of the camera-distance fog:
+  // it targets the two ends of the ranking specifically (world x, not distance
+  // from the camera), so the pavement/grass/tree line can fade out together
+  // right where the world actually ends, instead of relying on distance fog
+  // alone — which stays too faint that close in to hide the seam.
+  edgeFog: {
+    start: 150, // distance past layout.startX/endX where the fade begins
+    range: 500, // distance beyond that until fully faded
+  },
   camera: {
     fov: 45,
   },
@@ -126,6 +135,29 @@ export const DEBUG_GROUPS: { group: string; fields: DebugField[] }[] = [
     fields: [
       { path: "decor.density", label: "density", min: 0.2, max: 3, step: 0.1, rebuild: true },
       { path: "decor.treeScale", label: "tree size", min: 0.4, max: 2.5, step: 0.05, rebuild: true },
+    ],
+  },
+  {
+    group: "Edge fog",
+    fields: [
+      {
+        path: "edgeFog.start",
+        label: "start",
+        min: 0,
+        max: 800,
+        step: 10,
+        rebuild: true,
+        hint: "distance past each end of the ranking where the fade-out begins",
+      },
+      {
+        path: "edgeFog.range",
+        label: "fade length",
+        min: 20,
+        max: 1200,
+        step: 10,
+        rebuild: true,
+        hint: "distance beyond start until the ground is full fog color and decor has faded out",
+      },
     ],
   },
   {
