@@ -6,6 +6,7 @@ import { makeBillboardGeometry } from "@/lib/geometry";
 import { FACE_RES, getPlaceholderFaceTexture, makeFaceTexture } from "@/lib/textures";
 import { getIcon } from "@/lib/icons";
 import { BILL_Z, type LayoutItem, type SceneLayout } from "@/lib/layout";
+import { interactionState } from "@/lib/interactionState";
 import { vertexColorMat } from "./materials";
 
 // How far ahead/behind the camera a billboard keeps a painted face. Beyond it
@@ -107,6 +108,21 @@ function BillboardItem({ item }: { item: LayoutItem }) {
 }
 
 export default function Billboards({ layout }: { layout: SceneLayout }) {
+  // GrabNav hit-tests taps against this list — only empty slots are clickable,
+  // and it only needs to change when the layout itself changes.
+  useEffect(() => {
+    interactionState.targets = layout.items
+      .filter((it) => it.placeholder)
+      .map((it) => ({
+        rank: it.rank,
+        amount: it.amount,
+        x: it.x,
+        panelW: it.panelW,
+        panelH: it.panelH,
+        poleH: it.poleH,
+      }));
+  }, [layout]);
+
   return (
     <>
       {layout.items.map((item) => (

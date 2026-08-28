@@ -3,6 +3,7 @@ import Experience from "@/components/Experience";
 import Overlay from "@/components/Overlay";
 import GrabNav from "@/components/GrabNav";
 import DataSync from "@/components/DataSync";
+import BuyModal from "@/components/BuyModal";
 import { getRanking } from "@/lib/ranking.server";
 import { fmtUSD } from "@/lib/layout";
 
@@ -30,6 +31,7 @@ export default function Page() {
       <GrabNav />
       <Overlay />
       <DataSync />
+      <BuyModal />
     </main>
   );
 }

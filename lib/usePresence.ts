@@ -3,9 +3,19 @@ import { useEffect, useState } from "react";
 import { getSupabase, supabaseConfigured } from "./supabase";
 
 // How many people are on the highway right now.
-// Supabase presence when configured; otherwise it's honestly just you.
-export function usePresence(): number {
+// Supabase presence when configured; otherwise it's you plus every real
+// (non-placeholder) billboard already planted — an advertiser on the road
+// counts as being "on the road" too, not just a live human visitor.
+export function usePresence(extraOnline = 0): number {
   const [count, setCount] = useState(1);
+
+  // demo/no-backend fallback baseline — kept separate from the real
+  // subscription effect below so a changing billboard count never tears
+  // down and rebuilds a live presence channel.
+  useEffect(() => {
+    if (supabaseConfigured()) return;
+    setCount(1 + Math.max(0, extraOnline));
+  }, [extraOnline]);
 
   useEffect(() => {
     if (!supabaseConfigured()) return;
