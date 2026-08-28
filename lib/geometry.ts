@@ -295,6 +295,20 @@ export function makeCarGeometry(): THREE.BufferGeometry {
   return merge(parts);
 }
 
+// A single soft blob, reused instanced for both the little poof of dust a car
+// kicks up landing a bump and the bigger smoke/fire puffs of an explosion —
+// tinted per-instance, so one geometry covers every colour it needs to be.
+export function makePuffGeometry(): THREE.BufferGeometry {
+  const g = new THREE.IcosahedronGeometry(1, 0);
+  jitterFacets(g, 0.3);
+  return paint(g, "#ffffff");
+}
+
+// A single chunk of debris flung out when a car explodes, tinted per-instance.
+export function makeShardGeometry(): THREE.BufferGeometry {
+  return paint(new THREE.BoxGeometry(1, 1, 1), "#ffffff");
+}
+
 // Bird faces +X (the direction it flies); wings are separate meshes rooted at
 // the body so they can flap on their own.
 export function makeBirdBodyGeometry(): THREE.BufferGeometry {

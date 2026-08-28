@@ -5,6 +5,7 @@ import { debugState } from "@/lib/debugState";
 import { interactionState } from "@/lib/interactionState";
 import { BILL_Z } from "@/lib/layout";
 import { useStore } from "@/lib/store";
+import { carHitState, carClickQueue, CAR_HIT_HALF_X, CAR_HIT_HALF_Z, CAR_HIT_TOP } from "@/lib/carState";
 
 // Horizontal drag on the scene = another way to drive down the highway.
 // It scrolls the page rather than touching scrollState directly, so the camera
@@ -63,6 +64,38 @@ function hitTest(clientX: number, clientY: number) {
   return best;
 }
 
+// Same ray-box scan as hitTest above, but against Cars' live per-frame boxes
+// instead of the billboards' static ones — a tap picks whichever car is
+// nearest the camera among those it actually crosses.
+function hitTestCar(clientX: number, clientY: number): number | null {
+  const THREE = ensureThree();
+  const camera = interactionState.camera;
+  if (!THREE || !camera) return null;
+  raycaster ??= new THREE.Raycaster();
+  hitBox ??= new THREE.Box3();
+  hitPoint ??= new THREE.Vector3();
+  ndc ??= new THREE.Vector2();
+
+  ndc.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+
+  let best: number | null = null;
+  let bestDist = Infinity;
+  for (const c of carHitState.boxes) {
+    if (!c.active) continue;
+    hitBox.min.set(c.x - CAR_HIT_HALF_X, 0, c.z - CAR_HIT_HALF_Z);
+    hitBox.max.set(c.x + CAR_HIT_HALF_X, CAR_HIT_TOP, c.z + CAR_HIT_HALF_Z);
+    const hit = raycaster.ray.intersectBox(hitBox, hitPoint);
+    if (!hit) continue;
+    const d = camera.position.distanceTo(hit);
+    if (d < bestDist) {
+      bestDist = d;
+      best = c.index;
+    }
+  }
+  return best;
+}
+
 export default function GrabNav() {
   const surface = useRef<HTMLDivElement>(null);
 
@@ -85,6 +118,7 @@ export default function GrabNav() {
     let hoverX = 0;
     let hoverY = 0;
     let hoveredId: string | null = null;
+    let hoveredCar = false;
 
     const scrollMax = () => document.documentElement.scrollHeight - window.innerHeight;
 
@@ -124,17 +158,20 @@ export default function GrabNav() {
       hoverRaf = 0;
       const hit = pointerId === null ? hitTest(hoverX, hoverY) : null;
       const id = hit ? hit.id : null;
-      if (id === hoveredId) return;
+      const carHit = !hit && pointerId === null ? hitTestCar(hoverX, hoverY) !== null : false;
+      if (id === hoveredId && carHit === hoveredCar) return;
       hoveredId = id;
+      hoveredCar = carHit;
       interactionState.hovered = id;
-      el.classList.toggle("hovering", id !== null);
+      el.classList.toggle("hovering", id !== null || carHit);
     };
 
     const clearHover = () => {
       cancelAnimationFrame(hoverRaf);
       hoverRaf = 0;
-      if (hoveredId === null) return;
+      if (hoveredId === null && !hoveredCar) return;
       hoveredId = null;
+      hoveredCar = false;
       interactionState.hovered = null;
       el.classList.remove("hovering");
     };
@@ -180,12 +217,16 @@ export default function GrabNav() {
         raf = requestAnimationFrame(fling);
       } else if (!moved) {
         const hit = hitTest(e.clientX, e.clientY);
-        if (!hit) return;
-        if (hit.placeholder) {
-          useStore.getState().openBuyModal({ rank: hit.rank, amount: hit.amount });
-        } else if (hit.url) {
-          window.open(hit.url, "_blank", "noopener,noreferrer");
+        if (hit) {
+          if (hit.placeholder) {
+            useStore.getState().openBuyModal({ rank: hit.rank, amount: hit.amount });
+          } else if (hit.url) {
+            window.open(hit.url, "_blank", "noopener,noreferrer");
+          }
+          return;
         }
+        const carHit = hitTestCar(e.clientX, e.clientY);
+        if (carHit !== null) carClickQueue.push(carHit);
       }
     };
 

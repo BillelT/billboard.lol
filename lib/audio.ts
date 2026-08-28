@@ -223,6 +223,99 @@ class SceneAudio {
     return v;
   }
 
+  /** Cartoon "boing" for a car bump — one-shot, not a persistent voice like the
+   *  traffic loops above. `intensity` (0..1) is how hot the click streak has
+   *  gotten: it pitches and pushes the hop louder the more it escalates. */
+  playBump(pan: number, intensity: number) {
+    const ctx = this.context;
+    if (!ctx || !this.master || !this.on) return;
+    const t = ctx.currentTime;
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = clamp(pan, -1, 1);
+    panner.connect(this.master);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.16 + intensity * 0.16, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+    g.connect(panner);
+
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(170 + intensity * 60, t);
+    osc.frequency.exponentialRampToValueAtTime(480 + intensity * 260, t + 0.09);
+    osc.connect(g);
+    osc.start(t);
+    osc.stop(t + 0.16);
+
+    // a touch of clack under the tone, for a hair of physical impact
+    const clack = ctx.createBufferSource();
+    clack.buffer = this.noiseBuffer(ctx);
+    const clackBand = ctx.createBiquadFilter();
+    clackBand.type = "highpass";
+    clackBand.frequency.value = 1600;
+    const clackGain = ctx.createGain();
+    clackGain.gain.setValueAtTime(0.05 + intensity * 0.05, t);
+    clackGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+    clack.connect(clackBand).connect(clackGain).connect(panner);
+    clack.start(t);
+    clack.stop(t + 0.05);
+
+    setTimeout(() => panner.disconnect(), 250);
+  }
+
+  /** Cartoon explosion: a low boom, a noise blast that closes down fast, and a
+   *  high crackle tail. One-shot, same pattern as playBump. */
+  playExplosion(pan: number) {
+    const ctx = this.context;
+    if (!ctx || !this.master || !this.on) return;
+    const t = ctx.currentTime;
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = clamp(pan, -1, 1);
+    panner.connect(this.master);
+
+    const boom = ctx.createOscillator();
+    boom.type = "sine";
+    boom.frequency.setValueAtTime(120, t);
+    boom.frequency.exponentialRampToValueAtTime(38, t + 0.5);
+    const boomGain = ctx.createGain();
+    boomGain.gain.setValueAtTime(0.0001, t);
+    boomGain.gain.exponentialRampToValueAtTime(0.5, t + 0.02);
+    boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    boom.connect(boomGain).connect(panner);
+    boom.start(t);
+    boom.stop(t + 0.6);
+
+    const blast = ctx.createBufferSource();
+    blast.buffer = this.noiseBuffer(ctx);
+    const blastFilter = ctx.createBiquadFilter();
+    blastFilter.type = "lowpass";
+    blastFilter.frequency.setValueAtTime(3200, t);
+    blastFilter.frequency.exponentialRampToValueAtTime(200, t + 0.5);
+    const blastGain = ctx.createGain();
+    blastGain.gain.setValueAtTime(0.0001, t);
+    blastGain.gain.exponentialRampToValueAtTime(0.45, t + 0.015);
+    blastGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    blast.connect(blastFilter).connect(blastGain).connect(panner);
+    blast.start(t);
+    blast.stop(t + 0.5);
+
+    const crackle = ctx.createBufferSource();
+    crackle.buffer = this.noiseBuffer(ctx);
+    const crackleFilter = ctx.createBiquadFilter();
+    crackleFilter.type = "highpass";
+    crackleFilter.frequency.value = 2200;
+    const crackleGain = ctx.createGain();
+    crackleGain.gain.setValueAtTime(0.0001, t + 0.03);
+    crackleGain.gain.exponentialRampToValueAtTime(0.14, t + 0.05);
+    crackleGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    crackle.connect(crackleFilter).connect(crackleGain).connect(panner);
+    crackle.start(t);
+    crackle.stop(t + 0.32);
+
+    setTimeout(() => panner.disconnect(), 700);
+  }
+
   releaseVoice(v: Voice) {
     this.teardown(this.nodesOf.get(v));
     this.nodesOf.delete(v);
