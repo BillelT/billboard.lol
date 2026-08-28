@@ -28,7 +28,7 @@ export default function Night404Scene() {
     <Canvas
       shadows="soft"
       dpr={[1, MAX_DPR]}
-      camera={{ fov: 42, near: 1, far: 2400, position: [-3.1, 13.2, 28.5] }}
+      camera={{ fov: 42, near: 1, far: 2400, position: [0, 13.2, 28.5] }}
       gl={{
         antialias: true,
         powerPreference: "high-performance",

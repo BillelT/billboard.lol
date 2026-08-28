@@ -30,9 +30,13 @@ function LampSpot({ x, intensity, flicker }: { x: number; intensity: number; fli
         ref={light}
         position={[x, 15.3, BILL_Z + (flicker ? 0.5 : 1.3)]}
         angle={0.46}
-        penumbra={0.55}
+        penumbra={0.85}
         decay={2}
-        distance={32}
+        // Three.js gives a nonzero `distance` a hard windowed cutoff — the
+        // light doesn't just dim, it's forced to exactly zero at that radius,
+        // which is the sharp-edged ring that was showing up on the grass.
+        // 0 disables the cutoff entirely and lets decay alone do the fading.
+        distance={0}
         color={NIGHT.lampGlow}
         intensity={intensity}
         castShadow={!flicker}

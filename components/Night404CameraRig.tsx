@@ -6,8 +6,8 @@ import { useFrame } from "@react-three/fiber";
 // No scroll, no drive: this page is one static shot of the billboard, framed
 // with the same maths CameraRig.tsx uses per-billboard. A slow sway plus a
 // little mouse parallax keeps it from feeling like a frozen screenshot.
-const BASE_POS = new THREE.Vector3(-3.1, 13.2, 28.5);
-const BASE_LOOK = new THREE.Vector3(2.6, 5.4, -10);
+const BASE_POS = new THREE.Vector3(0, 13.2, 28.5);
+const BASE_LOOK = new THREE.Vector3(0, 5.4, -10);
 
 export default function Night404CameraRig() {
   const pointer = useRef({ x: 0, y: 0 });
