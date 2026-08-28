@@ -31,8 +31,23 @@ const MAX_PANEL_H = 34;
 const GROWTH = 2.4; // >1 keeps the drama at the top and the tail legible
 const COUNT_SATURATION = 15; // billboards it takes for the leader to close roughly half the gap to MAX_PANEL_H
 
+// The invite to buy in: whatever the ranking looks like, the road always ends
+// on one open slot so there's always somewhere to click "claim this". It's
+// synthesized here rather than stored, so it never shows up in the real
+// counts (billboards planted, total raised, presence) that read straight off
+// the billboards array.
+const AUTO_SLOT: Billboard = {
+  id: "auto-slot",
+  name: "auto-slot",
+  url: "",
+  color: "#fffaf0",
+  amount: 0,
+  placeholder: true,
+};
+
 export function computeLayout(billboards: Billboard[]): SceneLayout {
   const sorted = [...billboards].sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name));
+  if (!sorted.some((b) => b.placeholder)) sorted.push(AUTO_SLOT);
   const n = sorted.length;
   // the more billboards are competing, the taller the leader gets to be —
   // one alone is just the base size, and height saturates toward the max
