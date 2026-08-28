@@ -23,19 +23,27 @@ export interface SceneLayout {
 // The smallest billboard has a fixed, readable size and every rank above it
 // grows from there. Size therefore follows your position in the ranking, not the
 // raw amount — a 200-long ranking still ends on a real billboard instead of a
-// speck, and the leader is always the same monster whatever the money involved.
+// speck. The leader isn't a fixed monster either: with a single billboard on
+// the road there's no ranking to dramatize, so it sits at the base size too —
+// the ladder only stretches toward MAX_PANEL_H as more billboards join.
 const MIN_PANEL_H = 5.2;
 const MAX_PANEL_H = 34;
 const GROWTH = 2.4; // >1 keeps the drama at the top and the tail legible
+const COUNT_SATURATION = 15; // billboards it takes for the leader to close roughly half the gap to MAX_PANEL_H
 
 export function computeLayout(billboards: Billboard[]): SceneLayout {
   const sorted = [...billboards].sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name));
   const n = sorted.length;
+  // the more billboards are competing, the taller the leader gets to be —
+  // one alone is just the base size, and height saturates toward the max
+  // rather than starting there.
+  const leaderT = n > 1 ? (n - 1) / (n - 1 + COUNT_SATURATION) : 0;
+  const leaderH = MIN_PANEL_H + (MAX_PANEL_H - MIN_PANEL_H) * leaderT;
   let cursor = 0;
   const items = sorted.map((b, i) => {
     const rank = i + 1;
     const t = n > 1 ? (n - rank) / (n - 1) : 1; // 1 for the leader, 0 for the last
-    const panelH = MIN_PANEL_H + (MAX_PANEL_H - MIN_PANEL_H) * Math.pow(t, GROWTH);
+    const panelH = MIN_PANEL_H + (leaderH - MIN_PANEL_H) * Math.pow(t, GROWTH);
     const panelW = panelH * 1.9;
     const poleH = 1.8 + panelH * 0.36;
     const totalH = poleH + panelH;

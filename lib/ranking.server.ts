@@ -1,5 +1,6 @@
 import "server-only";
-import { SEED } from "./seed";
+import { ANCHOR_DOMAINS, SEED } from "./seed";
+import { fetchSiteInfo } from "./siteinfo.server";
 import type { Billboard } from "./types";
 
 interface Row {
@@ -14,13 +15,35 @@ interface Row {
   total_amount: string | number;
 }
 
+// Overlays real, live-fetched site info onto the rank 1 / rank 2 placeholder
+// slots (see ANCHOR_DOMAINS) so the fallback ranking never opens on a
+// completely bare road. fetchSiteInfo never throws and caches itself, so a
+// domain that's unreachable just leaves that slot as the plain placeholder.
+async function withAnchors(seed: Billboard[]): Promise<Billboard[]> {
+  const anchors = await Promise.all(ANCHOR_DOMAINS.map((d) => fetchSiteInfo(d).catch(() => null)));
+  return seed.map((b, i) => {
+    const info = anchors[i];
+    if (!info) return b;
+    return {
+      ...b,
+      name: info.domain,
+      url: info.url,
+      color: info.color,
+      title: info.title,
+      description: info.description,
+      iconUrl: info.iconUrl,
+      placeholder: false,
+    };
+  });
+}
+
 // Server-side ranking for metadata and the OG image. Reads Supabase over REST
 // (so the OG route stays dependency-free) and falls back to the seed ranking
 // whenever Supabase isn't configured or is unreachable.
 export async function getRanking(): Promise<Billboard[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return SEED;
+  if (!url || !key) return withAnchors(SEED);
 
   try {
     const res = await fetch(
@@ -30,9 +53,9 @@ export async function getRanking(): Promise<Billboard[]> {
         next: { revalidate: 30 },
       },
     );
-    if (!res.ok) return SEED;
+    if (!res.ok) return withAnchors(SEED);
     const rows = (await res.json()) as Row[];
-    if (!Array.isArray(rows) || rows.length === 0) return SEED;
+    if (!Array.isArray(rows) || rows.length === 0) return withAnchors(SEED);
     return rows.map((r) => ({
       id: String(r.id),
       name: r.name,
@@ -45,6 +68,6 @@ export async function getRanking(): Promise<Billboard[]> {
       category: r.category,
     }));
   } catch {
-    return SEED;
+    return withAnchors(SEED);
   }
 }
