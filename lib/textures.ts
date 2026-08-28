@@ -203,46 +203,75 @@ export function getPlaceholderFaceTexture(res: number): THREE.CanvasTexture {
   const inkSoft = "rgba(17,21,28,0.5)";
   const paper = "#fffaf0";
   const marking = "#f2b632";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
 
   ctx.fillStyle = paper;
   ctx.fillRect(0, 0, LW, LH);
 
-  // one clean inset ink border — a printed edge, not a dashed cutout
+  // one continuous dashed ink border, walked as a single rounded-rect path so
+  // the dash pattern wraps the corners cleanly instead of overshooting them
   const inset = 24;
   ctx.lineWidth = 9;
   ctx.strokeStyle = ink;
+  ctx.setLineDash([26, 18]);
+  ctx.lineDashOffset = 13;
   ctx.beginPath();
   ctx.roundRect(inset, inset, LW - inset * 2, LH - inset * 2, 30);
   ctx.stroke();
+  ctx.setLineDash([]);
 
   // the wordmark's own little billboard glyph, centered above the headline
-  const gs = 68;
+  const gs = 60;
   const gx = LW / 2 - gs / 2;
-  const gy = LH * 0.24;
+  const gy = LH * 0.14;
   ctx.fillStyle = ink;
   ctx.beginPath();
-  ctx.roundRect(gx, gy, gs, gs, 12);
+  ctx.roundRect(gx, gy, gs, gs, 11);
   ctx.fill();
   ctx.fillStyle = marking;
   ctx.beginPath();
-  ctx.roundRect(gx + 5, gy + 5, gs - 10, (gs - 10) * 0.55, 6);
+  ctx.roundRect(gx + 5, gy + 5, gs - 10, (gs - 10) * 0.55, 5);
   ctx.fill();
   ctx.fillStyle = paper;
   ctx.beginPath();
-  ctx.roundRect(gx + 5, gy + 5 + (gs - 10) * 0.55, gs - 10, (gs - 10) * 0.45 - 5, 6);
+  ctx.roundRect(gx + 5, gy + 5 + (gs - 10) * 0.55, gs - 10, (gs - 10) * 0.45 - 5, 5);
+  ctx.fill();
+
+  // eyebrow badge — the same tracked-uppercase pill language as the HUD gauges,
+  // pulled out from the body copy so status reads before the headline does
+  ctx.font = font(700, 24);
+  const kicker = "UNCLAIMED SPOT";
+  const kw = [...kicker].map((ch) => ctx.measureText(ch).width);
+  const kSpacing = 3;
+  const kTextW = kw.reduce((a, b) => a + b, 0) + kSpacing * (kicker.length - 1);
+  const padX = 22;
+  const badgeW = kTextW + padX * 2;
+  const badgeH = 44;
+  const badgeY = LH * 0.34;
+  ctx.fillStyle = marking;
+  ctx.beginPath();
+  ctx.roundRect(LW / 2 - badgeW / 2, badgeY, badgeW, badgeH, badgeH / 2);
   ctx.fill();
   ctx.fillStyle = ink;
-  ctx.fillRect(LW / 2 - 3, gy + gs, 6, 18);
+  fillTracked(ctx, kicker, LW / 2, badgeY + badgeH / 2 + 1, kSpacing);
 
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  // headline — the loudest thing on the panel, shrunk to fit the panel width
+  const headline = "PLACE YOUR BILLBOARD HERE";
+  const headlineMaxW = LW - inset * 2 - 80;
+  let headlineSize = 80;
+  ctx.font = font(800, headlineSize);
+  while (headlineSize > 34 && ctx.measureText(headline).width > headlineMaxW) {
+    headlineSize -= 2;
+    ctx.font = font(800, headlineSize);
+  }
   ctx.fillStyle = ink;
-  ctx.font = font(700, 68);
-  ctx.fillText("PLACE YOUR BILLBOARD HERE", LW / 2, LH * 0.63);
+  ctx.fillText(headline, LW / 2, LH * 0.62);
 
-  ctx.font = font(700, 27);
+  // sub-line — quieter and lighter, clearly secondary to the headline above
+  ctx.font = font(400, 30);
   ctx.fillStyle = inkSoft;
-  fillTracked(ctx, "NOT CLAIMED YET", LW / 2, LH * 0.76, 4);
+  ctx.fillText("Drive past to claim it", LW / 2, LH * 0.76);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
