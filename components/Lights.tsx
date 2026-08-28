@@ -31,14 +31,20 @@ export default function Lights() {
         position={sunPosition()}
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-145}
-        shadow-camera-right={145}
-        shadow-camera-top={115}
-        shadow-camera-bottom={-115}
+        // Tight enough that a 2048 map still resolves the frame and the lamp
+        // stems: a wider frustum spreads texels until a billboard's own face
+        // starts self-shadowing in blotches.
+        shadow-camera-left={-105}
+        shadow-camera-right={105}
+        shadow-camera-top={95}
+        shadow-camera-bottom={-70}
         shadow-camera-near={1}
         shadow-camera-far={400}
-        shadow-normalBias={0.06}
-        shadow-bias={-0.0002}
+        // Large flat panels are exactly where acne shows, and they are also
+        // where a generous normal bias costs nothing — there is no fine
+        // geometry here for the offset to eat into.
+        shadow-normalBias={0.45}
+        shadow-bias={-0.0008}
       />
       <object3D ref={target} position={[0, 0, -10]} />
     </group>
