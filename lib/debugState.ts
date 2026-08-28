@@ -61,11 +61,11 @@ export const debugState = {
     follow: 12,
     // Page pixels of scroll per world unit of road. Sets how much of the drive
     // one wheel tick buys — lower means the scene answers a small scroll.
-    scrollPerUnit: 8,
+    scrollPerUnit: 2,
     // Page pixels of scroll per pixel dragged. 1 makes a drag exactly as strong
     // as a scroll of the same distance, which is the whole point: the two ways
     // of driving should not feel like different gears.
-    grab: 1,
+    grab: 0.5,
   },
 };
 

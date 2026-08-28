@@ -186,19 +186,34 @@ export default function GrabNav() {
       el.classList.remove("hovering");
     };
 
-    const onDown = (e: PointerEvent) => {
-      if (e.button !== 0 && e.pointerType === "mouse") return;
-      pointerId = e.pointerId;
-      lastX = e.clientX;
-      downX = e.clientX;
-      velocity = 0;
-      moved = false;
-      cancelAnimationFrame(raf);
-      raf = 0;
-      el.setPointerCapture(e.pointerId);
-      el.classList.add("grabbing");
-      clearHover();
-    };
+const onDown = (e: PointerEvent) => {
+  if (e.button !== 0 && e.pointerType === "mouse") return;
+
+  // 1. Détection prioritaire : est-ce qu'on clique sur une voiture (ou dans son timer sticky) ?
+  const carHit = hitTestCar(e.clientX, e.clientY);
+  const now = performance.now();
+  const target = carHit ?? (now < stickyCar.until ? stickyCar.index : null);
+
+  if (target !== null) {
+    // On enregistre le clic sur la voiture immédiatement
+    carClickQueue.push(target);
+    stickyCar.index = target;
+    stickyCar.until = now + STICKY_MS;
+    return; // Fin de la fonction : on n'initialise PAS le drag
+  }
+
+  // 2. Si aucune voiture n'est touchée, on démarre le drag (sur la route, l'herbe, etc.)
+  pointerId = e.pointerId;
+  lastX = e.clientX;
+  downX = e.clientX;
+  velocity = 0;
+  moved = false;
+  cancelAnimationFrame(raf);
+  raf = 0;
+  surface.current?.setPointerCapture(e.pointerId);
+  surface.current?.classList.add("grabbing");
+  clearHover();
+};
 
     const onMove = (e: PointerEvent) => {
       if (pointerId === null) {
@@ -223,33 +238,25 @@ export default function GrabNav() {
       velocity = velocity * 0.35 + d * 0.65;
     };
 
-    const onUp = (e: PointerEvent) => {
-      if (pointerId !== e.pointerId) return;
-      pointerId = null;
-      el.releasePointerCapture?.(e.pointerId);
-      el.classList.remove("grabbing");
-      if (moved && Math.abs(velocity) > MIN_FLING) {
-        raf = requestAnimationFrame(fling);
-      } else if (!moved) {
-        const hit = hitTest(e.clientX, e.clientY);
-        if (hit) {
-          if (hit.placeholder) {
-            useStore.getState().openBuyModal({ rank: hit.rank, amount: hit.amount });
-          } else if (hit.url) {
-            window.open(hit.url, "_blank", "noopener,noreferrer");
-          }
-          return;
-        }
-        const carHit = hitTestCar(e.clientX, e.clientY);
-        const now = performance.now();
-        const target = carHit ?? (now < stickyCar.until ? stickyCar.index : null);
-        if (target !== null) {
-          carClickQueue.push(target);
-          stickyCar.index = target;
-          stickyCar.until = now + STICKY_MS;
-        }
+const onUp = (e: PointerEvent) => {
+  if (pointerId !== e.pointerId) return;
+  pointerId = null;
+  el.releasePointerCapture?.(e.pointerId);
+  el.classList.remove("grabbing");
+
+  if (moved && Math.abs(velocity) > MIN_FLING) {
+    raf = requestAnimationFrame(fling);
+  } else if (!moved) {
+    const hit = hitTest(e.clientX, e.clientY);
+    if (hit) {
+      if (hit.placeholder) {
+        useStore.getState().openBuyModal({ rank: hit.rank, amount: hit.amount });
+      } else if (hit.url) {
+        window.open(hit.url, "_blank", "noopener,noreferrer");
       }
-    };
+    }
+  }
+};
 
     // a wheel with a horizontal component (trackpad swipe) is the same gesture as
     // a drag, so it gets the same gain rather than a raw pixel-for-pixel scroll

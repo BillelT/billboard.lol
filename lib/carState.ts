@@ -19,9 +19,9 @@ export const carClickQueue: number[] = [];
 // than the car itself (roughly half-width 1.25, half-depth 0.6): cars are
 // small, fast, and moving, so the box is padded out generously rather than
 // hugging the model, or a tap next to the car just misses.
-export const CAR_HIT_HALF_X = 3;
-export const CAR_HIT_HALF_Z = 1.8;
-export const CAR_HIT_TOP = 3.5;
+export const CAR_HIT_HALF_X = 2.5;
+export const CAR_HIT_HALF_Z = 1.2;
+export const CAR_HIT_TOP = 2.5;
 
 // A tap that lands on a car "locks on" for a short window: the car keeps
 // driving between taps, so spam-clicking it would otherwise mean re-aiming
@@ -29,4 +29,4 @@ export const CAR_HIT_TOP = 3.5;
 // billboard or a different car keeps bumping the one already locked on,
 // wherever exactly it lands.
 export const stickyCar: { index: number | null; until: number } = { index: null, until: 0 };
-export const STICKY_MS = 700;
+export const STICKY_MS = 0;
