@@ -38,7 +38,7 @@ export default function Ground({ layout }: { layout: SceneLayout }) {
         positions[v * 3 + 1] = groundHeight(x, z);
         positions[v * 3 + 2] = z;
         const t = groundTint(x, z);
-        c.copy(grass).lerp(t > 0 ? light : dark, Math.abs(t) * 0.7);
+        c.copy(grass).lerp(t > 0 ? light : dark, Math.abs(t));
         colors[v * 3] = c.r;
         colors[v * 3 + 1] = c.g;
         colors[v * 3 + 2] = c.b;
