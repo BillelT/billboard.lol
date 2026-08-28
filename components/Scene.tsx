@@ -19,7 +19,7 @@ import PerfProbe from "./PerfProbe";
 import AdaptiveDpr from "./AdaptiveDpr";
 import DebugSync from "./DebugSync";
 import { perfEnabled } from "@/lib/perfState";
-import { debugEnabled } from "@/lib/debugState";
+import { debugEnabled, debugState } from "@/lib/debugState";
 
 const MAX_DPR = 1.75;
 
@@ -42,7 +42,7 @@ export default function Scene() {
       }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.12;
+        gl.toneMappingExposure = debugState.light.exposure;
       }}
     >
       {/* Haze starts close and climbs slowly all the way out. Exponential fog
