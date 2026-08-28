@@ -210,6 +210,15 @@ export default function Overlay() {
           target="_blank"
           rel="noopener noreferrer"
         >
+          <img
+            className="gauge__avatar"
+            src="https://www.google.com/s2/favicons?sz=64&domain=billeltighidet.fr"
+            alt=""
+            aria-hidden="true"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
           built by Billel
         </a>
       </aside>

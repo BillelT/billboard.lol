@@ -233,6 +233,13 @@ body {
 .gauge--sig:hover {
   color: var(--ink-2);
 }
+.gauge__avatar {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
 
 /* ---------------- scroll hint ---------------- */
 .hint {
