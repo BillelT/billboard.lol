@@ -109,14 +109,28 @@ class SceneAudio {
   private subs = new Set<(on: boolean) => void>();
   private on = false;
   private visibilityBound = false;
+  private level = 1;
 
   get enabled() {
     return this.on;
   }
 
+  get volume() {
+    return this.level;
+  }
+
   subscribe(fn: (on: boolean) => void) {
     this.subs.add(fn);
     return () => this.subs.delete(fn);
+  }
+
+  /** Live volume, 0..1 — scales the master gain without tearing the graph down. */
+  setVolume(v: number) {
+    this.level = clamp(v, 0, 1);
+    const ctx = this.context;
+    if (ctx && this.master && this.on) {
+      this.master.gain.setTargetAtTime(0.9 * this.level, ctx.currentTime, 0.08);
+    }
   }
 
   toggle() {
@@ -139,7 +153,7 @@ class SceneAudio {
       this.master.connect(ctx.destination);
     }
     this.on = true;
-    this.master.gain.setTargetAtTime(0.9, ctx.currentTime, 0.5);
+    this.master.gain.setTargetAtTime(0.9 * this.level, ctx.currentTime, 0.5);
     this.watchVisibility();
     this.startAmbient();
     for (const v of this.voices) v.attach(this.buildVoice(v));

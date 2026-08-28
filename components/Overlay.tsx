@@ -57,6 +57,7 @@ export default function Overlay() {
   const [busy, setBusy] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [sound, setSound] = useState(false);
+  const [volume, setVolume] = useState(1);
   const dockRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLDivElement>(null);
   const catMeasureRef = useRef<HTMLDivElement>(null);
@@ -109,6 +110,7 @@ export default function Overlay() {
     const off = sceneAudio.subscribe(setSound);
     const disarm = sceneAudio.armFromPreference();
     setSound(sceneAudio.enabled);
+    setVolume(sceneAudio.volume);
     return () => {
       off();
       disarm();
@@ -175,6 +177,16 @@ export default function Overlay() {
 
   const setAmountSafe = (n: number) => setAmount(Math.max(1, Math.min(100000, Math.round(n))));
   const step = (dir: 1 | -1) => setAmountSafe(amount + dir);
+
+  const changeVolume = (v: number) => {
+    setVolume(v);
+    if (v <= 0) {
+      sceneAudio.disable();
+      return;
+    }
+    if (!sceneAudio.enabled) sceneAudio.enable();
+    sceneAudio.setVolume(v);
+  };
 
   const filteredCategories = useMemo(
     () => CATEGORIES.filter((c) => c.toLowerCase().includes(catQuery.trim().toLowerCase())),
@@ -249,15 +261,27 @@ export default function Overlay() {
           <span className="gauge__key">sales</span>
           <b>{fmtUSD(totalBurned)}</b> made
         </div>
-        <button
-          className="gauge gauge--sound"
-          onClick={() => sceneAudio.toggle()}
-          aria-pressed={sound}
-          title={sound ? "Mute the highway" : "Hear the highway"}
-        >
-          <span className="gauge__key">sound</span>
-          <b>{sound ? "🔊 on" : "🔇 off"}</b>
-        </button>
+        <div className="gauge gauge--sound">
+          <button
+            className="gauge__soundBtn"
+            onClick={() => sceneAudio.toggle()}
+            aria-pressed={sound}
+            title={sound ? "Mute the highway" : "Hear the highway"}
+          >
+            <span className="gauge__key">sound</span>
+            <b>{sound ? "🔊 on" : "🔇 off"}</b>
+          </button>
+          <input
+            className="gauge__volume"
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volume}
+            onChange={(e) => changeVolume(Number(e.target.value))}
+            aria-label="Volume"
+          />
+        </div>
         <a
           className="gauge gauge--sig"
           href="https://x.com/billel_tighidet"
