@@ -18,17 +18,17 @@ export interface DebugField {
 export const debugState = {
   fog: {
     mode: "linear" as "linear" | "exp2",
-    near: 80, // where haze starts, relative to the subject
-    far: 1500, // where it tops out — larger is softer, more gradual
+    near: 0, // where haze starts, relative to the subject
+    far: 1375, // where it tops out — larger is softer, more gradual
     density: 0.0015, // exp2 only
     color: "#eaf5ff",
   },
   light: {
     exposure: 0.69,
     sun: 2,
-    hemi: 1.4,
-    sunAzimuth: 0, // radians around Y
-    sunElevation: 0.62, // radians above the horizon
+    hemi: 1.55,
+    sunAzimuth: 0.16, // radians around Y
+    sunElevation: 0.68, // radians above the horizon
   },
   sky: {
     zenith: "#5fb0ec",
@@ -45,6 +45,18 @@ export const debugState = {
   },
   camera: {
     fov: 45,
+  },
+  motion: {
+    // How tightly the camera sticks to the scroll. It is a damping rate, not a
+    // per-frame lerp: ~1/follow seconds to close the gap, so higher is more 1:1.
+    follow: 12,
+    // Page pixels of scroll per world unit of road. Sets how much of the drive
+    // one wheel tick buys — lower means the scene answers a small scroll.
+    scrollPerUnit: 8,
+    // World units the road moves when a drag crosses the whole screen width.
+    // ~100 is 1:1 with the billboard plane; a little past that because the
+    // ground under the cursor is nearer than the signs it runs to.
+    grabSpan: 130,
   },
 };
 
@@ -119,6 +131,36 @@ export const DEBUG_GROUPS: { group: string; fields: DebugField[] }[] = [
   {
     group: "Camera",
     fields: [{ path: "camera.fov", label: "fov", min: 20, max: 90, step: 1 }],
+  },
+  {
+    group: "Motion",
+    fields: [
+      {
+        path: "motion.follow",
+        label: "camera follow",
+        min: 1,
+        max: 30,
+        step: 0.5,
+        hint: "how hard the camera tracks the scroll — higher is 1:1, lower floats behind",
+      },
+      {
+        path: "motion.scrollPerUnit",
+        label: "scroll length",
+        min: 2,
+        max: 30,
+        step: 0.5,
+        rebuild: true,
+        hint: "page pixels of scroll per unit of road — lower means less scrolling for the same drive",
+      },
+      {
+        path: "motion.grabSpan",
+        label: "grab reach",
+        min: 20,
+        max: 400,
+        step: 5,
+        hint: "units of road a drag across the full screen width covers",
+      },
+    ],
   },
 ];
 

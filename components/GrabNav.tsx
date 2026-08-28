@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { scrollState } from "@/lib/scrollState";
+import { debugState } from "@/lib/debugState";
 
 // Horizontal drag on the scene = another way to drive down the highway.
 // It scrolls the page rather than touching scrollState directly, so the camera
 // rig, the scroll hint and the native scrollbar all stay in sync.
-const DRAG_TO_SCROLL = 1.6; // page pixels scrolled per pixel dragged
 const FRICTION = 0.94; // fling decay per frame
 const MIN_FLING = 0.05; // px/frame under which the fling stops
 
@@ -21,6 +22,16 @@ export default function GrabNav() {
     let moved = false;
 
     const scrollMax = () => document.documentElement.scrollHeight - window.innerHeight;
+
+    // Page pixels per pixel dragged. Derived rather than fixed: a drag across the
+    // full screen width always covers the same stretch of road, so grabbing feels
+    // identical whether the ranking is three billboards long or two hundred.
+    const gain = () => {
+      const road = Math.max(1, scrollState.roadLength);
+      const width = Math.max(1, window.innerWidth);
+      return (debugState.motion.grabSpan / road) * (scrollMax() / width);
+    };
+
     const scrollBy = (d: number) => {
       const next = Math.min(scrollMax(), Math.max(0, window.scrollY + d));
       window.scrollTo(0, next);
@@ -60,9 +71,11 @@ export default function GrabNav() {
       lastX = e.clientX;
       if (Math.abs(dx) > 0.5) moved = true;
       // grab the world: pulling left drives forward down the road
-      const d = -dx * DRAG_TO_SCROLL;
+      const d = -dx * gain();
       scrollBy(d);
-      velocity = velocity * 0.6 + d * 0.4;
+      // weighted towards the latest movement so a fling leaves at the speed the
+      // hand was actually going, instead of a averaged-down version of it
+      velocity = velocity * 0.35 + d * 0.65;
     };
 
     const onUp = (e: PointerEvent) => {
@@ -73,11 +86,12 @@ export default function GrabNav() {
       if (moved && Math.abs(velocity) > MIN_FLING) raf = requestAnimationFrame(fling);
     };
 
-    // a wheel with a horizontal component (trackpad swipe) drives too
+    // a wheel with a horizontal component (trackpad swipe) is the same gesture as
+    // a drag, so it gets the same gain rather than a raw pixel-for-pixel scroll
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
       e.preventDefault();
-      scrollBy(e.deltaX);
+      scrollBy(e.deltaX * gain());
     };
 
     el.addEventListener("pointerdown", onDown);
