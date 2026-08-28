@@ -344,7 +344,9 @@ class SceneAudio {
     const ctx = this.context;
     if (!ctx || !this.master || this.ambient) return;
     const gain = ctx.createGain();
-    gain.gain.value = 0.55;
+    // the bed sits under everything and never stops, so it has to be quiet
+    // enough to forget: loud enough to place you outdoors, not to be heard
+    gain.gain.value = 0.3;
     gain.connect(this.master);
     const sources: AudioScheduledSourceNode[] = [];
 
@@ -355,7 +357,7 @@ class SceneAudio {
     windBand.frequency.value = 620;
     windBand.Q.value = 0.5;
     const windGain = ctx.createGain();
-    windGain.gain.value = 0.16;
+    windGain.gain.value = 0.13;
     const gust = ctx.createOscillator();
     gust.type = "sine";
     gust.frequency.value = 0.06;
@@ -371,7 +373,7 @@ class SceneAudio {
     roadLow.type = "lowpass";
     roadLow.frequency.value = 240;
     const roadGain = ctx.createGain();
-    roadGain.gain.value = 0.5;
+    roadGain.gain.value = 0.32;
     road.connect(roadLow).connect(roadGain).connect(gain);
 
     sources.push(wind, gust, road);
