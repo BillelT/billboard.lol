@@ -15,6 +15,34 @@ interface SiteInfoResponse {
   error?: string;
 }
 
+// The two placeholder slots at rank 1 / rank 2, overlaid with the real,
+// live-fetched anchor domains instead of staying empty — used whenever there's
+// no real ranking yet, whether that's because Supabase isn't configured at all
+// or because it is and simply has no payments in it yet.
+async function anchorSeed(): Promise<Billboard[]> {
+  const anchors = await Promise.all(
+    ANCHOR_DOMAINS.map((d) =>
+      fetch(`/api/site-info?domain=${encodeURIComponent(d)}`)
+        .then((r) => (r.ok ? (r.json() as Promise<SiteInfoResponse>) : null))
+        .catch(() => null),
+    ),
+  );
+  return SEED.map((b, i) => {
+    const info = anchors[i];
+    if (!info || info.error) return b;
+    return {
+      ...b,
+      name: info.domain,
+      url: info.url,
+      color: info.color,
+      title: info.title,
+      description: info.description,
+      iconUrl: info.iconUrl,
+      placeholder: false,
+    };
+  });
+}
+
 // When Supabase is configured: load the current ranking and refetch on every new
 // payment (realtime insert) so ranks re-sort live in the scene.
 export default function DataSync() {
@@ -29,33 +57,9 @@ export default function DataSync() {
       return;
     }
     if (!supabaseConfigured()) {
-      // no backend: overlay the rank 1 / rank 2 placeholders with the real,
-      // live-fetched anchor domains instead of leaving every slot empty.
       let cancelled = false;
-      Promise.all(
-        ANCHOR_DOMAINS.map((d) =>
-          fetch(`/api/site-info?domain=${encodeURIComponent(d)}`)
-            .then((r) => (r.ok ? (r.json() as Promise<SiteInfoResponse>) : null))
-            .catch(() => null),
-        ),
-      ).then((anchors) => {
-        if (cancelled || anchors.every((a) => !a)) return;
-        setBillboards(
-          SEED.map((b, i) => {
-            const info = anchors[i];
-            if (!info || info.error) return b;
-            return {
-              ...b,
-              name: info.domain,
-              url: info.url,
-              color: info.color,
-              title: info.title,
-              description: info.description,
-              iconUrl: info.iconUrl,
-              placeholder: false,
-            };
-          }),
-        );
+      anchorSeed().then((seed) => {
+        if (!cancelled) setBillboards(seed);
       });
       return () => {
         cancelled = true;
@@ -74,7 +78,7 @@ export default function DataSync() {
           .from("current_ranking")
           .select("id,name,url,color,icon_url,title,description,category,total_amount")
           .order("total_amount", { ascending: false });
-        if (!error && data) {
+        if (!error && data && data.length > 0) {
           setBillboards(
             data.map(
               (r): Billboard => ({
@@ -90,6 +94,10 @@ export default function DataSync() {
               }),
             ),
           );
+        } else if (!cancelled) {
+          // no real payments yet (or the query failed) — show the anchors
+          // instead of an empty road.
+          setBillboards(await anchorSeed());
         }
       };
 
