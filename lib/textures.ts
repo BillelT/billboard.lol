@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { fmtUSD } from "./layout";
 
-// Topfloor-style ad face: brand color panel, white monogram tile + domain on the
+// Topfloor-style ad face: brand color panel (picked from the site's favicon), the
+// real favicon in a white tile + the domain and the site's own SEO line on the
 // left, big #rank / $amount on the right. Drawn once per (billboard, amount).
 const cache = new Map<string, THREE.CanvasTexture>();
 
@@ -22,6 +23,14 @@ function uiFont(): string {
   return stack || 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 }
 
+// binary-search-free trim: SEO descriptions are one short line on a panel
+function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
+  if (ctx.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(`${t}…`).width > maxW) t = t.slice(0, -1);
+  return `${t.trimEnd()}…`;
+}
+
 function shade(hex: string, f: number): string {
   const c = new THREE.Color(hex);
   c.offsetHSL(0, 0, f);
@@ -40,6 +49,11 @@ export function makeFaceTexture(opts: {
   amount: number;
   rank: number;
   res: number;
+  /** the site's real favicon, once it has loaded; monogram until then */
+  icon?: HTMLImageElement | null;
+  /** the site's own SEO copy */
+  title?: string | null;
+  description?: string | null;
 }): THREE.CanvasTexture {
   const W = opts.res;
   const H = Math.round(W * 0.53);
@@ -78,7 +92,7 @@ export function makeFaceTexture(opts: {
   ctx.lineWidth = 8;
   ctx.strokeRect(18, 18, LW - 36, LH - 36);
 
-  // monogram tile
+  // favicon tile — the real icon of the domain, with the monogram as fallback
   const tile = 176;
   const tx = 72;
   const ty = LH / 2 - tile / 2;
@@ -86,11 +100,28 @@ export function makeFaceTexture(opts: {
   ctx.beginPath();
   ctx.roundRect(tx, ty, tile, tile, 40);
   ctx.fill();
-  ctx.fillStyle = opts.color;
-  ctx.font = font(700, 110);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(opts.name.charAt(0).toUpperCase(), tx + tile / 2, ty + tile / 2 + 8);
+  const icon = opts.icon;
+  if (icon && icon.complete) {
+    const pad = 26;
+    const box = tile - pad * 2;
+    const iw = icon.naturalWidth || box;
+    const ih = icon.naturalHeight || box;
+    const k = Math.min(box / iw, box / ih);
+    const w = iw * k;
+    const h = ih * k;
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(tx, ty, tile, tile, 40);
+    ctx.clip();
+    ctx.drawImage(icon, tx + (tile - w) / 2, ty + (tile - h) / 2, w, h);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = opts.color;
+    ctx.font = font(700, 110);
+    ctx.fillText(opts.name.charAt(0).toUpperCase(), tx + tile / 2, ty + tile / 2 + 8);
+  }
 
   // domain name, auto-fit
   const nameX = tx + tile + 48;
@@ -108,11 +139,12 @@ export function makeFaceTexture(opts: {
   ctx.shadowOffsetY = 4;
   ctx.fillText(opts.name, nameX, LH / 2 - 26);
   ctx.shadowColor = "transparent";
+
+  // the site's own SEO line, clipped to whatever the panel can hold
+  const tagline = opts.description ?? opts.title ?? "your ad, but bigger";
   ctx.font = font(400, 36);
-  if (ctx.measureText("your ad, but bigger").width <= nameMaxW) {
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
-    ctx.fillText("your ad, but bigger", nameX, LH / 2 + 50);
-  }
+  ctx.fillStyle = "rgba(255,255,255,0.78)";
+  ctx.fillText(ellipsize(ctx, tagline, nameMaxW), nameX, LH / 2 + 50);
 
   // rank + amount on the right
   ctx.textAlign = "right";

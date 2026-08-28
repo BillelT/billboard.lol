@@ -20,8 +20,10 @@ npm install
 npm run dev
 ```
 
-That's it — with no environment variables the site runs in **demo mode**: seed
-ranking, bids applied locally in the scene, no payments taken.
+With no environment variables the highway runs on the seed ranking, and the
+claim form answers *"payments are not configured on this deployment"*: planting a
+billboard always goes through Stripe Checkout — there is no local path that adds
+one for free.
 
 ## Going live
 
@@ -34,7 +36,32 @@ Copy `.env.example` to `.env.local` and fill in:
 2. **Stripe** — set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, point a
    webhook at `/api/webhook` for `checkout.session.completed`, and set
    `NEXT_PUBLIC_SITE_URL`. Checkout sessions are created by `/api/checkout`;
-   the webhook records payments in Supabase.
+   the webhook is the only thing that writes a billboard into the database, so a
+   billboard exists exactly when a payment succeeded.
+
+On an existing database, run
+[`supabase/migrations/0001_site_metadata.sql`](./supabase/migrations/0001_site_metadata.sql)
+to add the scraped site columns.
+
+## What a billboard shows
+
+Nothing on a billboard is typed in by the buyer beyond the domain and the amount.
+When a payment lands, `lib/siteinfo.server.ts` reads the domain itself:
+
+- **the real favicon** — every `<link rel="icon">`/`apple-touch-icon` the page
+  declares, scored (bigger, PNG, non-legacy first), with `/favicon.ico` and the
+  public favicon service as fallbacks. It is painted into the white tile on the
+  panel and served back through `/api/icon` so the WebGL canvas stays untainted.
+- **the SEO copy** — `og:title`/`<title>` and `og:description`/`meta[description]`,
+  entity-decoded and trimmed. The description is the line under the domain.
+- **the background colour** — read off the favicon itself by
+  `lib/imagecolor.server.ts`, a dependency-free PNG decoder plus a hue histogram.
+  The dominant saturated hue is kept and only pushed into a band where white text
+  clears ~3.4:1 (a black-and-white logo becomes a dark slate). `theme-color` is
+  the fallback, then a deterministic palette colour.
+
+`/api/site-info?domain=` runs the same read live in the claim form, so you see the
+exact billboard you are about to pay for before you pay.
 
 Resets are cycles: `insert into cycles default values;` opens a new cycle and
 everyone starts from zero — the old cycle keeps its data as a hall of fame.

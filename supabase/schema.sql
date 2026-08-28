@@ -8,11 +8,19 @@ create table if not exists cycles (
   ends_at timestamptz
 );
 
+-- icon_url / title / description are scraped from the domain itself when a payment
+-- lands (see lib/siteinfo.server.ts): the real favicon, the site's own SEO copy
+-- and the colour read off that favicon. Nothing here is typed in by the buyer.
 create table if not exists companies (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
   url text not null,
   color text not null,
+  icon_url text,
+  title text,
+  description text,
+  category text,
+  enriched_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -27,11 +35,12 @@ create table if not exists payments (
 
 -- current ranking = payments of the latest cycle, summed per company
 create or replace view current_ranking as
-select c.id, c.name, c.url, c.color, sum(p.amount) as total_amount
+select c.id, c.name, c.url, c.color, c.icon_url, c.title, c.description, c.category,
+       sum(p.amount) as total_amount
 from payments p
 join companies c on c.id = p.company_id
 where p.cycle_id = (select id from cycles order by starts_at desc limit 1)
-group by c.id, c.name, c.url, c.color;
+group by c.id, c.name, c.url, c.color, c.icon_url, c.title, c.description, c.category;
 
 -- open the first cycle
 insert into cycles default values;

@@ -29,7 +29,7 @@ export default function DataSync() {
       const fetchRanking = async () => {
         const { data, error } = await supabase
           .from("current_ranking")
-          .select("id,name,url,color,total_amount")
+          .select("id,name,url,color,icon_url,title,description,category,total_amount")
           .order("total_amount", { ascending: false });
         if (!error && data) {
           setBillboards(
@@ -40,6 +40,10 @@ export default function DataSync() {
                 url: r.url,
                 color: r.color,
                 amount: Number(r.total_amount),
+                title: r.title,
+                description: r.description,
+                iconUrl: r.icon_url,
+                category: r.category,
               }),
             ),
           );

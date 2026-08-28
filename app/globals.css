@@ -502,6 +502,78 @@ body {
   cursor: wait;
 }
 
+/* live preview of the billboard being bought: real favicon, real SEO line,
+   background colour picked from the icon */
+.peek {
+  width: 100%;
+  font-size: 13px;
+  text-align: center;
+}
+.peek--muted {
+  color: var(--ink-2);
+}
+.peek--card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: var(--edge);
+  box-shadow: var(--lift-1);
+  color: #fff;
+  overflow: hidden;
+}
+.peek__tile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--r-sm);
+  background: var(--paper-2);
+  border: var(--edge);
+}
+.peek__tile img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+.peek__tile b {
+  font-size: 22px;
+  font-weight: 800;
+}
+.peek__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.peek__text b {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.peek__text em {
+  font-style: normal;
+  font-size: 12px;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.82);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.peek__note {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.75);
+}
+
 /* one line about the current #1 — and clicking it loads the winning amount */
 .lede {
   font: inherit;
@@ -541,6 +613,7 @@ body {
   .claim { flex-wrap: wrap; }
   .claim > input, .cta, .cat { width: 100%; flex: 1 0 100%; }
   .cat__panel { width: 100%; }
+  .peek__note { display: none; }
 }
 
 /* ---------- dev perf overlay (?perf=1) ---------- */

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { makeBillboardGeometry } from "@/lib/geometry";
 import { FACE_RES, makeFaceTexture } from "@/lib/textures";
+import { getIcon } from "@/lib/icons";
 import { BILL_Z, type LayoutItem, type SceneLayout } from "@/lib/layout";
 import { vertexColorMat } from "./materials";
 
@@ -25,7 +26,7 @@ function BillboardItem({ item }: { item: LayoutItem }) {
   );
   useEffect(() => () => geometry.dispose(), [geometry]);
 
-  const texKey = `${item.name}|${item.color}|${item.amount}|${item.rank}`;
+  const faceKey = `${item.name}|${item.color}|${item.amount}|${item.rank}`;
   useEffect(
     () => () => {
       painted.current?.tex.dispose();
@@ -53,6 +54,11 @@ function BillboardItem({ item }: { item: LayoutItem }) {
     if (!mat) return;
     const near = Math.abs(camera.position.x - item.x) < textureRange(item.panelW);
 
+    // asking for the icon starts its download; the face repaints once it lands.
+    // Only domains the server actually found an icon for are ever requested.
+    const icon = near && item.iconUrl ? getIcon(item.name) : null;
+    const texKey = `${faceKey}|${icon ? "icon" : "mono"}`;
+
     if (near && painted.current?.key !== texKey) {
       painted.current?.tex.dispose();
       const tex = makeFaceTexture({
@@ -61,6 +67,9 @@ function BillboardItem({ item }: { item: LayoutItem }) {
         amount: item.amount,
         rank: item.rank,
         res: FACE_RES,
+        icon,
+        title: item.title,
+        description: item.description,
       });
       painted.current = { key: texKey, tex };
       mat.map = tex;
