@@ -18,6 +18,20 @@ function paint(geo: THREE.BufferGeometry, hex: string): THREE.BufferGeometry {
   return geo;
 }
 
+
+// Icosahedra come out non-indexed and cylinders indexed; mergeGeometries needs
+// one or the other, so everything is flattened before merging. It also gives
+// every prop hard per-face normals, which is the look we want anyway.
+function merge(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const flat = parts.map((p) => (p.index ? p.toNonIndexed() : p));
+  const merged = mergeGeometries(flat, false)!;
+  flat.forEach((f, i) => {
+    if (f !== parts[i]) f.dispose();
+  });
+  parts.forEach((p) => p.dispose());
+  return merged;
+}
+
 function place(geo: THREE.BufferGeometry, x: number, y: number, z: number, s = 1, sy?: number, sz?: number) {
   geo.scale(s, sy ?? s, sz ?? s);
   geo.translate(x, y, z);
@@ -33,6 +47,7 @@ export function makeBillboardGeometry(panelW: number, panelH: number, poleH: num
   const poleS = THREE.MathUtils.clamp(panelH * 0.085, 0.26, 1.9);
   const tk = THREE.MathUtils.clamp(panelH * 0.07, 0.2, 1.3);
   const poleTop = poleH + panelH * 0.45;
+  const midY = poleH + panelH / 2;
 
   const poleZ = -(tk / 2 + poleS / 2 + 0.02); // posts sit behind the panel
   if (panelW < 7.5) {
@@ -41,6 +56,7 @@ export function makeBillboardGeometry(panelW: number, panelH: number, poleH: num
     const px = panelW * 0.3;
     parts.push(paint(place(box(poleS, poleTop, poleS), -px, poleTop / 2, poleZ), PAL.steelDark));
     parts.push(paint(place(box(poleS, poleTop, poleS), px, poleTop / 2, poleZ), PAL.steelDark));
+    // cross-brace tying the two posts together, well under the panel
     parts.push(
       paint(
         place(box(panelW * 0.6 + poleS, poleS * 0.55, poleS * 0.55), 0, poleH * 0.55, poleZ),
@@ -48,21 +64,63 @@ export function makeBillboardGeometry(panelW: number, panelH: number, poleH: num
       ),
     );
   }
-  // panel body + white frame lip
-  parts.push(paint(place(box(panelW, panelH, tk), 0, poleH + panelH / 2, 0), PAL.frame));
+
+  // panel body
+  parts.push(paint(place(box(panelW, panelH, tk), 0, midY, 0), PAL.frame));
+
+  // Raised frame around the face — four bars standing proud of the panel, which
+  // is what gives the billboard its thick white border and a lit edge that
+  // catches the sun instead of a flat card.
+  const fw = Math.max(tk * 0.9, panelH * 0.045); // border thickness
+  const fd = tk * 0.75; // how far it stands out
+  const fz = tk / 2 + fd / 2;
+  const outerW = panelW + fw * 0.6;
+  for (const sy of [1, -1]) {
+    parts.push(
+      paint(place(box(outerW, fw, fd), 0, midY + sy * (panelH / 2 - fw / 2), fz), PAL.frame),
+    );
+  }
+  for (const sx of [1, -1]) {
+    parts.push(
+      paint(
+        place(box(fw, panelH - fw * 2, fd), sx * (panelW / 2 - fw / 2 + fw * 0.3), midY, fz),
+        PAL.frame,
+      ),
+    );
+  }
+
+  // overhanging cap and matching sill, in the cooler steel tone
   parts.push(
-    paint(place(box(panelW * 1.03, tk * 0.9, tk * 1.5), 0, poleH + panelH + tk * 0.2, 0), PAL.steel),
+    paint(place(box(panelW * 1.05, fw * 0.85, tk * 2.6), 0, poleH + panelH + fw * 0.35, tk * 0.5), PAL.steel),
   );
   parts.push(
-    paint(place(box(panelW * 1.03, tk * 0.9, tk * 1.5), 0, poleH - tk * 0.2, 0), PAL.steel),
+    paint(place(box(panelW * 1.04, fw * 0.7, tk * 2.2), 0, poleH - fw * 0.3, tk * 0.4), PAL.steel),
   );
   if (panelH > 6) {
     // maintenance catwalk under the face
     parts.push(paint(place(box(panelW * 0.94, tk * 0.4, tk * 3), 0, poleH - tk, tk * 1.4), PAL.catwalk));
   }
-  const merged = mergeGeometries(parts, false)!;
-  parts.forEach((p) => p.dispose());
-  return merged;
+
+  // Floodlights: the detail that sells the thing as a real roadside billboard.
+  // Housings tilt back toward the face and sit on stems off the cap.
+  const u = THREE.MathUtils.clamp(panelH * 0.062, 0.2, 1.3);
+  const lampY = poleH + panelH + fw * 0.8;
+  const lampCount = panelW < 7.5 ? 2 : 3;
+  for (let i = 0; i < lampCount; i++) {
+    const lx = panelW * (lampCount === 2 ? (i === 0 ? -0.24 : 0.24) : (i - 1) * 0.3);
+    parts.push(paint(place(box(0.32, 1.5, 0.32), lx, lampY + u * 0.75, tk * 0.9, u), PAL.lamp));
+    const arm = paint(place(box(0.3, 0.3, 2.1), lx, lampY + u * 1.5, tk * 0.9 + u * 0.75, u), PAL.lamp);
+    parts.push(arm);
+    const head = box(1.9, 0.8, 1.1);
+    head.rotateX(0.55);
+    parts.push(paint(place(head, lx, lampY + u * 1.35, tk * 0.9 + u * 1.75, u), PAL.lamp));
+    // the lit face of the housing, aimed down at the panel
+    const glass = box(1.6, 0.14, 0.85);
+    glass.rotateX(0.55);
+    parts.push(paint(place(glass, lx, lampY + u * 0.95, tk * 0.9 + u * 1.62, u), PAL.lampGlow));
+  }
+
+  return merge(parts);
 }
 
 function jitterFacets(geo: THREE.BufferGeometry, amp: number) {
@@ -77,22 +135,34 @@ function jitterFacets(geo: THREE.BufferGeometry, amp: number) {
   return geo;
 }
 
-// Segment counts are kept low on purpose: these are instanced hundreds of times,
-// and smooth vertex normals keep the shading soft even on a coarse silhouette.
-export function makeTreeGeometry(kind: "round" | "tall"): THREE.BufferGeometry {
+// Segment counts are kept low on purpose: these are instanced hundreds of times.
+// Foliage is faceted rather than smooth — flat facets catch the sun on one side
+// and fall away on the other, which is where the low-poly read comes from.
+export function makeTreeGeometry(kind: "round" | "tall" | "pine"): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
+  const blob = (r: number, y: number, x = 0, z = 0, hex: string = PAL.foliage, sy = 1) => {
+    const g = new THREE.IcosahedronGeometry(r, 1);
+    jitterFacets(g, 0.16);
+    return paint(place(g, x, y, z, 1, sy, 1), hex);
+  };
   if (kind === "round") {
-    parts.push(paint(place(new THREE.CylinderGeometry(0.16, 0.26, 1.6, 6), 0, 0.8, 0), PAL.trunk));
-    parts.push(paint(place(new THREE.SphereGeometry(1.15, 9, 7), 0, 2.15, 0, 1, 1.05, 1), PAL.foliage));
-    parts.push(paint(place(new THREE.SphereGeometry(0.62, 7, 5), 0.62, 2.6, 0.18), PAL.foliageLight));
+    parts.push(paint(place(new THREE.CylinderGeometry(0.16, 0.28, 1.7, 6), 0, 0.85, 0), PAL.trunk));
+    parts.push(blob(1.15, 2.2, 0, 0, PAL.foliage, 1.05));
+    parts.push(blob(0.66, 2.72, 0.6, 0.2, PAL.foliageLight));
+    parts.push(blob(0.5, 1.95, -0.75, -0.2, PAL.foliageDark));
+  } else if (kind === "tall") {
+    parts.push(paint(place(new THREE.CylinderGeometry(0.13, 0.24, 2.4, 6), 0, 1.2, 0), PAL.trunk));
+    parts.push(blob(0.95, 2.8, 0, 0, PAL.foliage, 1.2));
+    parts.push(blob(0.72, 3.85, 0, 0, PAL.foliageLight));
+    parts.push(blob(0.52, 2.35, 0.6, -0.3, PAL.foliageDark));
   } else {
-    parts.push(paint(place(new THREE.CylinderGeometry(0.13, 0.22, 2.3, 6), 0, 1.15, 0), PAL.trunk));
-    parts.push(paint(place(new THREE.SphereGeometry(0.95, 9, 6), 0, 2.7, 0, 1, 1.15, 1), PAL.foliage));
-    parts.push(paint(place(new THREE.SphereGeometry(0.7, 7, 5), 0, 3.7, 0), PAL.foliageLight));
+    // conifer: three stacked cones, darkest at the base
+    parts.push(paint(place(new THREE.CylinderGeometry(0.14, 0.22, 1.1, 5), 0, 0.55, 0), PAL.trunk));
+    parts.push(paint(place(new THREE.ConeGeometry(1.15, 1.7, 7), 0, 1.55, 0), PAL.foliageDark));
+    parts.push(paint(place(new THREE.ConeGeometry(0.92, 1.5, 7), 0, 2.5, 0), PAL.foliage));
+    parts.push(paint(place(new THREE.ConeGeometry(0.62, 1.3, 7), 0, 3.4, 0), PAL.foliageLight));
   }
-  const merged = mergeGeometries(parts, false)!;
-  parts.forEach((p) => p.dispose());
-  return merged;
+  return merge(parts);
 }
 
 export function makeRockGeometry(): THREE.BufferGeometry {
@@ -104,29 +174,67 @@ export function makeRockGeometry(): THREE.BufferGeometry {
 }
 
 export function makeBushGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.SphereGeometry(0.55, 7, 5);
-  geo.scale(1.15, 0.75, 1);
-  geo.translate(0, 0.4, 0);
-  return paint(geo, PAL.bush);
+  const parts = [
+    (() => {
+      const g = new THREE.IcosahedronGeometry(0.55, 1);
+      jitterFacets(g, 0.18);
+      return paint(place(g, 0, 0.4, 0, 1.15, 0.78, 1), PAL.bush);
+    })(),
+    (() => {
+      const g = new THREE.IcosahedronGeometry(0.34, 1);
+      jitterFacets(g, 0.18);
+      return paint(place(g, 0.42, 0.32, 0.16), PAL.foliageLight);
+    })(),
+  ];
+  return merge(parts);
+}
+
+// Tufts of tall grass — the small thing that stops props from looking pasted
+// onto a flat green sheet. A handful of tapered blades leaning off-centre.
+export function makeGrassTuftGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const blades = 5;
+  for (let i = 0; i < blades; i++) {
+    const a = (i / blades) * Math.PI * 2 + 0.6;
+    const h = 0.5 + ((i * 37) % 10) / 22;
+    const g = new THREE.CylinderGeometry(0.005, 0.05, h, 3);
+    g.translate(0, h / 2, 0);
+    g.rotateZ(Math.sin(a) * 0.34);
+    g.rotateX(Math.cos(a) * 0.34);
+    g.translate(Math.cos(a) * 0.09, 0, Math.sin(a) * 0.09);
+    parts.push(paint(g, i % 2 ? PAL.grassBlade : PAL.grassBladeLight));
+  }
+  return merge(parts);
 }
 
 export function makePowerPoleGeometry(): THREE.BufferGeometry {
-  const parts = [
-    paint(place(new THREE.CylinderGeometry(0.09, 0.14, 6.6, 6), 0, 3.3, 0), PAL.pole),
-    paint(place(box(2.3, 0.15, 0.15), 0, 5.95, 0), PAL.pole),
-  ];
-  const merged = mergeGeometries(parts, false)!;
-  parts.forEach((p) => p.dispose());
-  return merged;
+  return merge([
+    paint(place(new THREE.CylinderGeometry(0.09, 0.15, 6.8, 6), 0, 3.4, 0), PAL.pole),
+    paint(place(box(2.4, 0.16, 0.16), 0, 6.15, 0), PAL.pole),
+    paint(place(box(0.5, 0.14, 0.14), 0, 5.6, 0), PAL.pole),
+  ]);
 }
 
+// Wires are their own prop, and they do not cast: a hairline box throws a hard
+// 55-unit shadow bar across the road, which is far louder than the wire itself.
+// Poles land one per decor cell at a fixed spacing, so each carries the span
+// that reaches the next one and the line reads as continuous.
+export function makePowerWireGeometry(span: number): THREE.BufferGeometry {
+  return merge(
+    [-0.95, 0.95].map((wz) => paint(place(box(span, 0.03, 0.03), span / 2, 6.02, wz), PAL.wire)),
+  );
+}
+
+// Clouds are faceted on purpose: the scene reads as folded paper, and a smooth
+// sphere in the sky is the one thing that gives away that it is not.
 export function makeCloudGeometry(): THREE.BufferGeometry {
-  const blob = (x: number, y: number, z: number, s: number) =>
-    paint(place(new THREE.SphereGeometry(1, 10, 8), x, y, z, s, s * 0.72, s * 0.9), "#ffffff");
+  const blob = (x: number, y: number, z: number, s: number) => {
+    const g = new THREE.IcosahedronGeometry(1, 1);
+    jitterFacets(g, 0.12);
+    return paint(place(g, x, y, z, s, s * 0.7, s * 0.9), "#ffffff");
+  };
   const parts = [blob(0, 0, 0, 1.4), blob(1.35, 0.1, 0.25, 0.95), blob(-1.25, 0.05, -0.15, 0.9), blob(0.25, 0.55, 0, 0.95)];
-  const merged = mergeGeometries(parts, false)!;
-  parts.forEach((p) => p.dispose());
-  return merged;
+  return merge(parts);
 }
 
 // Helicopter faces +X (the direction it flies).
@@ -150,9 +258,7 @@ export function makeHelicopterGeometry(): THREE.BufferGeometry {
   }
   // mast
   parts.push(paint(place(new THREE.CylinderGeometry(0.13, 0.16, 0.6, 6), 0, 1.15, 0), PAL.heliDark));
-  const merged = mergeGeometries(parts, false)!;
-  parts.forEach((p) => p.dispose());
-  return merged;
+  return merge(parts);
 }
 
 export function makeMainRotorGeometry(): THREE.BufferGeometry {
@@ -161,9 +267,7 @@ export function makeMainRotorGeometry(): THREE.BufferGeometry {
     paint(place(box(8.2, 0.08, 0.38), 0, 0, 0), PAL.rotor),
     paint(place(box(0.38, 0.08, 8.2), 0, 0, 0), PAL.rotor),
   ];
-  const merged = mergeGeometries(parts, false)!;
-  parts.forEach((p) => p.dispose());
-  return merged;
+  return merge(parts);
 }
 
 export function makeTailRotorGeometry(): THREE.BufferGeometry {
@@ -171,9 +275,7 @@ export function makeTailRotorGeometry(): THREE.BufferGeometry {
     paint(place(box(1.5, 0.06, 0.2), 0, 0, 0), PAL.rotor),
     paint(place(box(0.2, 0.06, 1.5), 0, 0, 0), PAL.rotor),
   ];
-  const merged = mergeGeometries(parts, false)!;
-  parts.forEach((p) => p.dispose());
-  return merged;
+  return merge(parts);
 }
 
 // Body left white so per-instance colour can tint it; glass and tyres stay dark
@@ -190,9 +292,7 @@ export function makeCarGeometry(): THREE.BufferGeometry {
   for (const [wx, wz] of [[0.82, 0.62], [0.82, -0.62], [-0.82, 0.62], [-0.82, -0.62]] as const) {
     parts.push(paint(place(wheel(), wx, 0.3, wz), PAL.wheel));
   }
-  const merged = mergeGeometries(parts, false)!;
-  parts.forEach((p) => p.dispose());
-  return merged;
+  return merge(parts);
 }
 
 // Bird faces +X (the direction it flies); wings are separate meshes rooted at
@@ -204,9 +304,7 @@ export function makeBirdBodyGeometry(): THREE.BufferGeometry {
     paint(place(box(0.26, 0.09, 0.09), 0.85, 0.05, 0), PAL.birdBeak),
     paint(place(box(0.5, 0.08, 0.34), -0.66, 0.03, 0), PAL.bird),
   ];
-  const merged = mergeGeometries(parts, false)!;
-  parts.forEach((p) => p.dispose());
-  return merged;
+  return merge(parts);
 }
 
 // One swept-back wing, rooted at the origin and reaching along +Z, drawn as a

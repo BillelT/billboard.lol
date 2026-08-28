@@ -24,7 +24,7 @@ uniform vec3 uSunDir;
 void main() {
   vec3 dir = normalize(vWorld - cameraPosition);
   float h = clamp(dir.y, -1.0, 1.0);
-  vec3 col = mix(uHorizon, uZenith, pow(smoothstep(0.0, 0.55, h), 0.75));
+  vec3 col = mix(uHorizon, uZenith, pow(smoothstep(0.0, 0.62, h), 0.62));
   col = mix(uGround, col, smoothstep(-0.12, 0.02, h));
   float sd = max(dot(dir, normalize(uSunDir)), 0.0);
   col += uSun * (pow(sd, 400.0) * 0.9 + pow(sd, 6.0) * 0.07);

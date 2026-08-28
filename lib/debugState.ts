@@ -19,20 +19,20 @@ export const debugState = {
   fog: {
     mode: "linear" as "linear" | "exp2",
     near: 0, // where haze starts, relative to the subject
-    far: 1375, // where it tops out — larger is softer, more gradual
+    far: 2100, // where it tops out — larger is softer, more gradual
     density: 0.0015, // exp2 only
-    color: "#eaf5ff",
+    color: "#e6f3ff",
   },
   light: {
-    exposure: 0.69,
-    sun: 2,
-    hemi: 1.55,
+    exposure: 0.82,
+    sun: 2.7,
+    hemi: 1.05,
     sunAzimuth: 0.16, // radians around Y
     sunElevation: 0.68, // radians above the horizon
   },
   sky: {
-    zenith: "#5fb0ec",
-    horizon: "#eaf6ff",
+    zenith: "#3f9bec",
+    horizon: "#e8f5ff",
   },
   terrain: {
     amplitude: 3.5,
