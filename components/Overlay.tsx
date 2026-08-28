@@ -14,6 +14,19 @@ import PerfPanel from "./PerfPanel";
 
 const DebugPanel = dynamic(() => import("./DebugPanel"), { ssr: false });
 
+function SoundIcon({ muted }: { muted: boolean }) {
+  return (
+    <svg className="gauge__soundIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+      {muted ? (
+        <path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+      ) : (
+        <path d="M16.5 8.5a5 5 0 0 1 0 7" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+      )}
+    </svg>
+  );
+}
+
 // what /api/site-info reads off the domain: real favicon, real SEO copy, and the
 // background colour picked from the icon
 interface SiteInfo {
@@ -247,20 +260,11 @@ export default function Overlay() {
       <aside className="gauges">
         <div className="gauge gauge--live">
           <span className="gauge__dot" aria-hidden="true" />
-          <b>{online}</b> on the road
+          {online} on the road
         </div>
-        <div className="gauge">
-          <span className="gauge__key">tallest</span>
-          <b>{top ? fmtFeet(top.totalH) : "—"}</b>
-        </div>
-        <div className="gauge">
-          <span className="gauge__key">planted</span>
-          <b>{layout.items.length}</b> billboards
-        </div>
-        <div className="gauge">
-          <span className="gauge__key">sales</span>
-          <b>{fmtUSD(totalBurned)}</b> made
-        </div>
+        <div className="gauge">Tallest is {top ? fmtFeet(top.totalH) : "—"}</div>
+        <div className="gauge">{layout.items.length} billboards planted</div>
+        <div className="gauge">{fmtUSD(totalBurned)} made</div>
         <div className="gauge gauge--sound">
           <button
             className="gauge__soundBtn"
@@ -268,8 +272,8 @@ export default function Overlay() {
             aria-pressed={sound}
             title={sound ? "Mute the highway" : "Hear the highway"}
           >
-            <span className="gauge__key">sound</span>
-            <b>{sound ? "🔊 on" : "🔇 off"}</b>
+            Sound {sound ? "on" : "off"}
+            <SoundIcon muted={!sound} />
           </button>
           <input
             className="gauge__volume"
@@ -297,7 +301,7 @@ export default function Overlay() {
               e.currentTarget.style.display = "none";
             }}
           />
-          built by Billel
+          Built by Billel
         </a>
       </aside>
 
