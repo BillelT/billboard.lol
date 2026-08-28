@@ -5,7 +5,7 @@ import { PAL } from "./palette";
 // Every prop is a single merged, vertex-colored geometry: one material, one draw
 // call per mesh (or per InstancedMesh for the scattered decor).
 
-function paint(geo: THREE.BufferGeometry, hex: string): THREE.BufferGeometry {
+export function paint(geo: THREE.BufferGeometry, hex: string): THREE.BufferGeometry {
   const c = new THREE.Color(hex);
   const n = geo.attributes.position.count;
   const arr = new Float32Array(n * 3);
@@ -22,7 +22,7 @@ function paint(geo: THREE.BufferGeometry, hex: string): THREE.BufferGeometry {
 // Icosahedra come out non-indexed and cylinders indexed; mergeGeometries needs
 // one or the other, so everything is flattened before merging. It also gives
 // every prop hard per-face normals, which is the look we want anyway.
-function merge(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
+export function merge(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
   const flat = parts.map((p) => (p.index ? p.toNonIndexed() : p));
   const merged = mergeGeometries(flat, false)!;
   flat.forEach((f, i) => {
@@ -32,13 +32,13 @@ function merge(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
   return merged;
 }
 
-function place(geo: THREE.BufferGeometry, x: number, y: number, z: number, s = 1, sy?: number, sz?: number) {
+export function place(geo: THREE.BufferGeometry, x: number, y: number, z: number, s = 1, sy?: number, sz?: number) {
   geo.scale(s, sy ?? s, sz ?? s);
   geo.translate(x, y, z);
   return geo;
 }
 
-function box(w: number, h: number, d: number) {
+export function box(w: number, h: number, d: number) {
   return new THREE.BoxGeometry(w, h, d);
 }
 
