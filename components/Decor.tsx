@@ -8,7 +8,9 @@ import {
   makeTreeGeometry,
   makeRockGeometry,
   makeBushGeometry,
+  makeGrassTuftGeometry,
   makePowerPoleGeometry,
+  makePowerWireGeometry,
 } from "@/lib/geometry";
 import type { SceneLayout } from "@/lib/layout";
 import { debugState } from "@/lib/debugState";
@@ -59,20 +61,31 @@ export default function Decor({ layout }: { layout: SceneLayout }) {
         o.scale.setScalar(lerp(sMin, sMax, rng()));
       };
 
+    const poleSpot = (_rng: () => number, x0: number, o: THREE.Object3D) => {
+      o.position.set(x0, groundHeight(x0, 13.5), 13.5);
+      o.rotation.set(0, 0, 0);
+      o.scale.setScalar(1);
+    };
+
     const kinds: Kind[] = [
-      { geometry: makeTreeGeometry("round"), perCell: 5, castShadow: true, place: treeSpot },
-      { geometry: makeTreeGeometry("tall"), perCell: 3, castShadow: true, place: treeSpot },
+      { geometry: makeTreeGeometry("round"), perCell: 4, castShadow: true, place: treeSpot },
+      { geometry: makeTreeGeometry("tall"), perCell: 2, castShadow: true, place: treeSpot },
+      { geometry: makeTreeGeometry("pine"), perCell: 3, castShadow: true, place: treeSpot },
       { geometry: makeRockGeometry(), perCell: 3, castShadow: true, place: lowSpot(9, 60, 0.35, 1.4) },
       { geometry: makeBushGeometry(), perCell: 4, castShadow: false, place: lowSpot(7.5, 70, 0.6, 1.8) },
+      // tufts hug the verges, where the eye is closest to the ground
+      { geometry: makeGrassTuftGeometry(), perCell: 9, castShadow: false, place: lowSpot(6.5, 34, 0.6, 1.35) },
       {
         geometry: makePowerPoleGeometry(),
         perCell: 1,
         castShadow: true,
-        place: (_rng, x0, o) => {
-          o.position.set(x0, groundHeight(x0, 7.8), 7.8);
-          o.rotation.set(0, 0, 0);
-          o.scale.setScalar(1);
-        },
+        place: poleSpot,
+      },
+      {
+        geometry: makePowerWireGeometry(CHUNK),
+        perCell: 1,
+        castShadow: false,
+        place: poleSpot,
       },
     ];
 

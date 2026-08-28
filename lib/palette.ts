@@ -1,35 +1,41 @@
 // Closed palette — every 3D color in the scene comes from here (topfloor-like bright daylight).
 export const PAL = {
   // sky & atmosphere
-  skyTop: "#5fb0ec",
-  skyHorizon: "#eaf6ff",
+  skyTop: "#3f9bec",
+  skyHorizon: "#e8f5ff",
   skyGround: "#d8ecdf",
-  fog: "#eaf5ff",
+  fog: "#e6f3ff",
   sun: "#fff3dd",
   hemiSky: "#cfe6fa",
   hemiGround: "#b8d9a2",
 
   // ground & road
-  grass: "#a3d383",
-  grassLight: "#b8e098",
-  grassDark: "#8fc46f",
-  road: "#8e939b",
-  roadLine: "#f5f7f4",
-  shoulder: "#c8cdb9",
+  grass: "#71c552",
+  grassLight: "#8ad566",
+  grassDark: "#57ad3f",
+  road: "#71777f",
+  roadLine: "#fbfcf9",
+  shoulder: "#b9c3a6",
 
   // vegetation & props
-  foliage: "#7dc45e",
-  foliageLight: "#97d878",
-  trunk: "#9c7350",
+  foliage: "#4faa3c",
+  foliageLight: "#6cc652",
+  foliageDark: "#3d8c2e",
+  trunk: "#8a5f3c",
   rock: "#c4cbd2",
-  bush: "#8ed072",
-  pole: "#a98a68",
+  bush: "#5cb443",
+  pole: "#8e6b4a",
+  wire: "#8d939b",
+  grassBlade: "#4fa63a",
+  grassBladeLight: "#74c953",
 
   // billboard structure
-  steel: "#f2f4f6",
-  steelDark: "#d7dce1",
-  frame: "#ffffff",
-  catwalk: "#e3e7ea",
+  steel: "#f6f4ee",
+  steelDark: "#c3c9d0",
+  frame: "#fbf9f3",
+  catwalk: "#dde2e7",
+  lamp: "#41474f",
+  lampGlow: "#fff6dd",
 
   // cars
   carColors: ["#f2b632", "#e4572e", "#3aa6a6", "#f5f5f0", "#5b8cd6"],
