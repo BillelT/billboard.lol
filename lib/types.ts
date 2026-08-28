@@ -8,4 +8,5 @@ export interface Billboard {
   description?: string | null; // the site's own meta description
   iconUrl?: string | null; // absolute URL of the site's favicon (proxied for display)
   category?: string | null;
+  placeholder?: boolean; // an unclaimed slot — rendered as "place your billboard here", not a real advertiser
 }
