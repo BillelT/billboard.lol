@@ -39,6 +39,27 @@ export default function Night404Billboard() {
   const tk = THREE.MathUtils.clamp(PANEL_H * 0.07, 0.2, 1.3);
   const midY = POLE_H + PANEL_H / 2;
   const top = POLE_H + PANEL_H;
+  // Clear of the cap's own front face (it juts out to ~1.8*tk) so the web
+  // reads as strung in open air in front of the structure, not buried in it.
+  const webZ = tk * 2.1;
+
+  // makeSpiderwebTexture draws its dense hub at the canvas's top-left corner
+  // — but a PlaneGeometry is centered on its own mesh position, so "anchor at
+  // (x, y)" means offsetting the mesh by half the plane's own size (and
+  // un-mirroring that offset when the plane is flipped to hang the web off a
+  // different corner). Without this the web renders half a plane-width away
+  // from the corner it's meant to be attached to.
+  const web = (anchorX: number, anchorY: number, size: number, mirrorX = false, mirrorY = false) => {
+    const sx = mirrorX ? -1 : 1;
+    const sy = mirrorY ? -1 : 1;
+    return {
+      position: [anchorX + (sx * size) / 2, anchorY - (sy * size) / 2, webZ] as [number, number, number],
+      scale: [sx, sy, 1] as [number, number, number],
+    };
+  };
+  const webTopLeft = web(-PANEL_W / 2, top, 4.4);
+  const webTopRight = web(PANEL_W / 2, top, 3.6, true);
+  const webLowerLeft = web(-PANEL_W / 2, POLE_H + 3.6, 4.8);
 
   const goHome = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -62,17 +83,17 @@ export default function Night404Billboard() {
         <meshBasicMaterial map={faceTex} toneMapped={false} />
       </mesh>
 
-      {/* cobwebs at the frame corners — see makeSpiderwebTexture for the anchor rule */}
-      <mesh position={[-PANEL_W / 2 + 0.3, top - 0.4, tk / 2 + 0.05]}>
+      {/* cobwebs strung across the frame corners, in front of the structure */}
+      <mesh position={webTopLeft.position} scale={webTopLeft.scale}>
         <planeGeometry args={[4.4, 4.4]} />
         <meshBasicMaterial map={webTex} transparent depthWrite={false} toneMapped={false} />
       </mesh>
-      <mesh position={[PANEL_W / 2 - 0.3, top - 0.4, tk / 2 + 0.05]} scale={[-1, 1, 1]}>
+      <mesh position={webTopRight.position} scale={webTopRight.scale}>
         <planeGeometry args={[3.6, 3.6]} />
         <meshBasicMaterial map={webTex} transparent depthWrite={false} toneMapped={false} />
       </mesh>
-      <mesh position={[-PANEL_W / 2 + 0.35, POLE_H + 0.35, tk / 2 + 0.05]} scale={[1, -1, 1]}>
-        <planeGeometry args={[3.2, 3.2]} />
+      <mesh position={webLowerLeft.position} scale={webLowerLeft.scale}>
+        <planeGeometry args={[4.8, 4.8]} />
         <meshBasicMaterial map={webTex} transparent depthWrite={false} toneMapped={false} />
       </mesh>
 

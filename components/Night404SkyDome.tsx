@@ -64,8 +64,8 @@ void main() {
 // Aimed to actually land inside the static camera's frame (see
 // Night404CameraRig) — up and to the right of the billboard, like the
 // reference shot, rather than a generic "somewhere in the sky" direction.
-const MOON_DIR = new THREE.Vector3(0.478, 0.109, -0.871).normalize();
-const BITE_DIR = new THREE.Vector3(0.493, 0.108, -0.863).normalize();
+const MOON_DIR = new THREE.Vector3(0.323, 0.109, -0.940).normalize();
+const BITE_DIR = new THREE.Vector3(0.337, 0.108, -0.935).normalize();
 
 export default function Night404SkyDome() {
   const ref = useRef<THREE.Mesh>(null);
