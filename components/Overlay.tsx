@@ -276,7 +276,7 @@ export default function Overlay() {
           {online} on the road
         </div>
         <div className="gauge">Tallest is {top ? fmtFeet(top.totalH) : "—"}</div>
-        <div className="gauge">{layout.items.length} billboards planted</div>
+        <div className="gauge">{realCount} billboards planted</div>
         <div className="gauge">{fmtUSD(totalBurned)} made</div>
         <div className="gauge gauge--sound">
           <button
