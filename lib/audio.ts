@@ -184,7 +184,7 @@ class SceneAudio {
     if (typeof window === "undefined" || this.on) return () => {};
     let want = false;
     try {
-      want = window.localStorage.getItem("outgrow.sound") === "on";
+      want = window.localStorage.getItem("billboard.sound") === "on";
     } catch {
       want = false;
     }
@@ -217,7 +217,7 @@ class SceneAudio {
 
   private remember(on: boolean) {
     try {
-      window.localStorage.setItem("outgrow.sound", on ? "on" : "off");
+      window.localStorage.setItem("billboard.sound", on ? "on" : "off");
     } catch {
       /* private mode — the toggle just won't be remembered */
     }

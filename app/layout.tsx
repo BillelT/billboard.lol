@@ -16,7 +16,7 @@ const outfit = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL(site),
-  title: "OutGrow.lol — the biggest billboard money can buy",
+  title: "billboard.lol — the biggest billboard money can buy",
   description:
     "A low-poly American highway where companies bid for billboards. Pay more, get bigger, get seen first. A satire, obviously.",
 };
