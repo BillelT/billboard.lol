@@ -178,81 +178,94 @@ function fillTracked(ctx: CanvasRenderingContext2D, text: string, cx: number, y:
   ctx.textAlign = align;
 }
 
-// Empty-slot face: same warm paper + hard ink edge + Outfit type as the rest of
-// the UI, so an unclaimed billboard reads as "ours, waiting" rather than a
-// generic dashed-border placeholder. One canvas, shared by every empty slot —
-// unlike makeFaceTexture it never varies per-billboard, so it's drawn once.
-let placeholderTex: THREE.CanvasTexture | null = null;
+// Empty-slot marker. An unclaimed spot is NOT a billboard: nothing is built
+// there yet, so nothing is modelled — no panel, no posts, no steel. It's a
+// dashed outline of the billboard that *could* stand there, drawn as a flat
+// transparent overlay in the world. Panel and legs live on the same canvas so
+// one quad carries the whole silhouette.
+export interface PlaceholderPlan {
+  texture: THREE.CanvasTexture;
+  planeW: number;
+  planeH: number;
+  centerY: number;
+}
 
-export function getPlaceholderFaceTexture(res: number): THREE.CanvasTexture {
-  if (placeholderTex) return placeholderTex;
+export function makePlaceholderOutline(
+  panelW: number,
+  panelH: number,
+  poleH: number,
+): PlaceholderPlan {
+  const pad = Math.max(0.6, panelH * 0.06); // room for the stroke itself
+  const planeW = panelW + pad * 2;
+  const planeH = poleH + panelH + pad * 2;
 
-  const W = res;
-  const H = Math.round(W * 0.53);
+  const key = `slot|${panelW.toFixed(2)}|${panelH.toFixed(2)}|${poleH.toFixed(2)}`;
+  const hit = cache.get(key);
+  if (hit) return { texture: hit, planeW, planeH, centerY: planeH / 2 - pad };
+
+  // constant pixels-per-world-unit, so a dash is the same real size on every
+  // slot whatever its rank
+  const ppu = THREE.MathUtils.clamp(1600 / planeW, 24, 90);
+  const W = Math.round(planeW * ppu);
+  const H = Math.round(planeH * ppu);
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
-  const LW = 1024;
-  const LH = LW * 0.53;
-  ctx.scale(W / LW, H / LH);
-  const family = uiFont();
-  const font = (w: number, s: number) => `${w} ${s}px ${family}`;
+  const u = (n: number) => n * ppu; // world units -> canvas px
 
-  const ink = "#11151c";
-  const inkSoft = "rgba(17,21,28,0.5)";
-  const paper = "#fffaf0";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  const stroke = "#ffffff";
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = u(Math.max(0.14, panelH * 0.028));
+  ctx.lineJoin = "miter";
+  const dash = [u(panelH * 0.1), u(panelH * 0.062)];
 
-  ctx.fillStyle = paper;
-  ctx.fillRect(0, 0, LW, LH);
+  // panel — a faint wash inside the frame so the slot reads as a surface and
+  // not just four floating lines
+  const px = u(pad);
+  const py = u(pad);
+  const pw = u(panelW);
+  const ph = u(panelH);
+  ctx.fillStyle = "rgba(255,255,255,0.13)";
+  ctx.fillRect(px, py, pw, ph);
+  ctx.setLineDash(dash);
+  ctx.strokeRect(px, py, pw, ph);
 
-  // one continuous dashed ink border, walked as a single rounded-rect path so
-  // the dash pattern wraps the corners cleanly instead of overshooting them
-  const inset = 24;
-  ctx.lineWidth = 9;
-  ctx.strokeStyle = ink;
-  ctx.setLineDash([26, 18]);
-  ctx.lineDashOffset = 13;
-  ctx.beginPath();
-  ctx.roundRect(inset, inset, LW - inset * 2, LH - inset * 2, 30);
-  ctx.stroke();
+  // legs, straight down to the ground — same count rule as a built billboard
+  const legTop = py + ph;
+  const legBottom = H - u(pad);
+  const legW = u(Math.max(0.5, panelW * 0.055));
+  const legXs = panelW < 7.5 ? [0] : [-panelW * 0.3, panelW * 0.3];
+  for (const lx of legXs) {
+    const cx = px + pw / 2 + u(lx);
+    ctx.strokeRect(cx - legW / 2, legTop, legW, legBottom - legTop);
+  }
   ctx.setLineDash([]);
 
-  // headline — type only, no glyph and no badge competing with it. Set on two
-  // lines so it fills the panel the way a real billboard's copy would, instead
-  // of one thin line floating in the middle.
-  const lines = ["PLACE YOUR", "BILLBOARD HERE"];
-  const maxW = LW - inset * 2 - 72;
-  const fit = (text: string) => {
-    let size = 150;
-    ctx.font = font(800, size);
-    while (size > 40 && ctx.measureText(text).width > maxW) {
-      size -= 2;
-      ctx.font = font(800, size);
-    }
-    return size;
-  };
-  const headlineSize = Math.min(fit(lines[0]), fit(lines[1]));
-  ctx.font = font(800, headlineSize);
-  ctx.fillStyle = ink;
-  const lineH = headlineSize * 1.02;
-  const block = LH * 0.45;
-  ctx.fillText(lines[0], LW / 2, block - lineH / 2);
-  ctx.fillText(lines[1], LW / 2, block + lineH / 2);
+  // copy, sized off the panel so every slot reads the same at any rank
+  const family = uiFont();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = stroke;
+  const headline = "PLACE YOUR BILLBOARD HERE";
+  let size = u(panelH * 0.15);
+  const maxW = pw * 0.82;
+  ctx.font = `800 ${size}px ${family}`;
+  while (size > 8 && ctx.measureText(headline).width > maxW) {
+    size *= 0.94;
+    ctx.font = `800 ${size}px ${family}`;
+  }
+  ctx.fillText(headline, px + pw / 2, py + ph * 0.52);
 
-  // sub-line — tracked uppercase, quiet and clearly secondary to the headline
-  ctx.font = font(600, 28);
-  ctx.fillStyle = inkSoft;
-  fillTracked(ctx, "DRIVE PAST TO CLAIM IT", LW / 2, LH * 0.79, 6);
+  ctx.font = `600 ${size * 0.38}px ${family}`;
+  fillTracked(ctx, "DRIVE PAST TO SEE IT", px + pw / 2, py + ph * 0.72, size * 0.06);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
-  placeholderTex = tex;
-  return tex;
+  trackTexture(key, tex);
+  return { texture: tex, planeW, planeH, centerY: planeH / 2 - pad };
 }
 
 // Towed banner: white strip, red border, the current leader spelled out.

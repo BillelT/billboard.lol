@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { makeBillboardGeometry } from "@/lib/geometry";
-import { FACE_RES, getPlaceholderFaceTexture, makeFaceTexture } from "@/lib/textures";
+import { FACE_RES, makeFaceTexture, makePlaceholderOutline } from "@/lib/textures";
 import { getIcon } from "@/lib/icons";
 import { BILL_Z, type LayoutItem, type SceneLayout } from "@/lib/layout";
 import { interactionState } from "@/lib/interactionState";
@@ -54,16 +54,6 @@ function BillboardItem({ item }: { item: LayoutItem }) {
     const mat = face.current;
     if (!mat) return;
 
-    // empty slots share one static texture — no per-domain repaint, no disposal
-    if (item.placeholder) {
-      if (!mat.map) {
-        mat.map = getPlaceholderFaceTexture(FACE_RES);
-        mat.color.set("#ffffff");
-        mat.needsUpdate = true;
-      }
-      return;
-    }
-
     const near = Math.abs(camera.position.x - item.x) < textureRange(item.panelW);
 
     // asking for the icon starts its download; the face repaints once it lands.
@@ -107,6 +97,46 @@ function BillboardItem({ item }: { item: LayoutItem }) {
   );
 }
 
+// An unclaimed spot: no structure is built there, so none is modelled. Just the
+// dashed outline of the billboard that could stand there, on a single
+// transparent quad — the same drawing the interface uses, standing in the world.
+function EmptySlot({ item }: { item: LayoutItem }) {
+  const group = useRef<THREE.Group>(null);
+  const spawned = useRef(false);
+
+  const plan = useMemo(
+    () => makePlaceholderOutline(item.panelW, item.panelH, item.poleH),
+    [item.panelW, item.panelH, item.poleH],
+  );
+
+  useFrame((_, dt) => {
+    const g = group.current;
+    if (!g) return;
+    if (!spawned.current) {
+      g.position.x = item.x;
+      g.scale.setScalar(0.001);
+      spawned.current = true;
+    }
+    g.position.x = THREE.MathUtils.damp(g.position.x, item.x, 2.5, dt);
+    g.scale.setScalar(THREE.MathUtils.damp(g.scale.x, 1, 3.2, dt));
+  });
+
+  return (
+    <group ref={group} position={[item.x, 0, BILL_Z]}>
+      <mesh position={[0, plan.centerY, 0]}>
+        <planeGeometry args={[plan.planeW, plan.planeH]} />
+        <meshBasicMaterial
+          map={plan.texture}
+          transparent
+          depthWrite={false}
+          side={THREE.DoubleSide}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 export default function Billboards({ layout }: { layout: SceneLayout }) {
   // GrabNav hit-tests taps against this list — only empty slots are clickable,
   // and it only needs to change when the layout itself changes.
@@ -125,9 +155,13 @@ export default function Billboards({ layout }: { layout: SceneLayout }) {
 
   return (
     <>
-      {layout.items.map((item) => (
-        <BillboardItem key={item.id} item={item} />
-      ))}
+      {layout.items.map((item) =>
+        item.placeholder ? (
+          <EmptySlot key={item.id} item={item} />
+        ) : (
+          <BillboardItem key={item.id} item={item} />
+        ),
+      )}
     </>
   );
 }
