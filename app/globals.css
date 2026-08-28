@@ -781,8 +781,11 @@ body {
   left: 14px;
   z-index: 30;
   width: 264px;
+  min-width: 220px;
   max-height: calc(100vh - 28px);
-  overflow-y: auto;
+  min-height: 120px;
+  overflow: auto;
+  resize: both;
   padding: 10px 12px 14px;
   border-radius: 12px;
   background: rgba(20, 24, 31, 0.9);
@@ -793,6 +796,7 @@ body {
 }
 .dbg-collapsed {
   width: auto;
+  resize: none;
 }
 .dbg-head {
   display: flex;
@@ -803,6 +807,11 @@ body {
   top: 0;
   padding-bottom: 8px;
   background: inherit;
+  cursor: grab;
+  touch-action: none;
+}
+.dbg-head:active {
+  cursor: grabbing;
 }
 .dbg button {
   font: inherit;

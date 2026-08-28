@@ -5,6 +5,7 @@ import { PAL } from "@/lib/palette";
 import { groundHeight, groundRows, groundTint } from "@/lib/terrain";
 import type { SceneLayout } from "@/lib/layout";
 import { useRebuild } from "./useRebuild";
+import { debugState } from "@/lib/debugState";
 import { DECOR_AHEAD_REACH } from "./Decor";
 
 const COL_SPACING = 40;
@@ -33,6 +34,8 @@ export default function Ground({ layout }: { layout: SceneLayout }) {
     const grass = new THREE.Color(PAL.grass);
     const light = new THREE.Color(PAL.grassLight);
     const dark = new THREE.Color(PAL.grassDark);
+    const fog = new THREE.Color(PAL.fog);
+    const { start: edgeStart, range: edgeRange } = debugState.edgeFog;
 
     let v = 0;
     for (const z of rows) {
@@ -43,6 +46,9 @@ export default function Ground({ layout }: { layout: SceneLayout }) {
         positions[v * 3 + 2] = z;
         const t = groundTint(x, z);
         c.copy(grass).lerp(t > 0 ? light : dark, Math.abs(t));
+        const distPastEdge = Math.max(0, x - layout.endX, layout.startX - x);
+        const edgeT = THREE.MathUtils.smoothstep(distPastEdge, edgeStart, edgeStart + edgeRange);
+        if (edgeT > 0) c.lerp(fog, edgeT);
         colors[v * 3] = c.r;
         colors[v * 3 + 1] = c.g;
         colors[v * 3 + 2] = c.b;
