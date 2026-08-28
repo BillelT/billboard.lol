@@ -37,17 +37,18 @@ export async function POST(req: Request) {
     if (name && amount > 0) {
       const supabase = createClient(supaUrl, supaKey);
 
-      const { data: cycle } = await supabase
+      const { data: cycle, error: cycleError } = await supabase
         .from("cycles")
         .select("id")
         .order("starts_at", { ascending: false })
         .limit(1)
         .single();
+      if (cycleError) console.error("webhook: cycle lookup failed", cycleError);
 
       // read the site again here rather than trusting anything the browser sent
       const info = await fetchSiteInfo(name).catch(() => null);
 
-      const { data: company } = await supabase
+      const { data: company, error: companyError } = await supabase
         .from("companies")
         .upsert(
           {
@@ -64,14 +65,16 @@ export async function POST(req: Request) {
         )
         .select("id")
         .single();
+      if (companyError) console.error("webhook: company upsert failed", companyError);
 
       if (cycle && company) {
-        await supabase.from("payments").insert({
+        const { error: paymentError } = await supabase.from("payments").insert({
           company_id: company.id,
           cycle_id: cycle.id,
           amount,
           stripe_session_id: session.id,
         });
+        if (paymentError) console.error("webhook: payment insert failed", paymentError);
       }
     }
   }
