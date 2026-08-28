@@ -54,6 +54,8 @@ export function makeFaceTexture(opts: {
   /** the site's own SEO copy */
   title?: string | null;
   description?: string | null;
+  /** the category the buyer picked at checkout */
+  category?: string | null;
 }): THREE.CanvasTexture {
   const W = opts.res;
   const H = Math.round(W * 0.53);
@@ -123,7 +125,31 @@ export function makeFaceTexture(opts: {
     ctx.fillText(opts.name.charAt(0).toUpperCase(), tx + tile / 2, ty + tile / 2 + 8);
   }
 
-  // domain name, auto-fit
+  // category pill — the buyer's chosen category, top-left, clear of the rank
+  if (opts.category) {
+    const label = opts.category.toUpperCase();
+    ctx.font = font(700, 30);
+    const pillMaxW = LW - 128 - 420;
+    const clipped = ellipsize(ctx, label, pillMaxW);
+    const padX = 22;
+    const pillH = 50;
+    const pillW = ctx.measureText(clipped).width + padX * 2;
+    const px = 64;
+    const py = 42;
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.beginPath();
+    ctx.roundRect(px, py, pillW, pillH, pillH / 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.4)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(clipped, px + padX, py + pillH / 2 + 1);
+  }
+
+  // domain name, auto-fit then hard-truncated so it never runs into the rank
   const nameX = tx + tile + 48;
   const nameMaxW = LW - nameX - 380;
   let size = 96;
@@ -132,12 +158,14 @@ export function makeFaceTexture(opts: {
     size -= 4;
     ctx.font = font(700, size);
   }
+  const displayName = ellipsize(ctx, opts.name, nameMaxW);
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 4;
-  ctx.fillText(opts.name, nameX, LH / 2 - 26);
+  ctx.fillText(displayName, nameX, LH / 2 - 26);
   ctx.shadowColor = "transparent";
 
   // the site's own SEO line, clipped to whatever the panel can hold
