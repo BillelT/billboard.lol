@@ -682,7 +682,7 @@ body {
   color: rgba(255, 255, 255, 0.75);
 }
 
-/* one line about the current #1 — and clicking it loads the winning amount */
+/* the payment-confirmation line under the claim form */
 .lede {
   font: inherit;
   font-size: 13px;
@@ -692,20 +692,6 @@ body {
   background: none;
   border: none;
   padding: 0;
-}
-.lede--action {
-  cursor: pointer;
-}
-.lede--action span {
-  font-weight: 700;
-  color: var(--ink);
-  border-bottom: 2px solid var(--marking);
-}
-.lede--action:hover span {
-  background: rgba(242, 182, 50, 0.45);
-}
-.lede--action:active span {
-  background: var(--marking);
 }
 
 @media (max-width: 720px) {

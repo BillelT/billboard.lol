@@ -60,7 +60,8 @@ export default function Overlay() {
   const totalBurned = useMemo(() => billboards.reduce((a, b) => a + b.amount, 0), [billboards]);
   const online = usePresence();
 
-  const [amount, setAmount] = useState(20);
+  const [amount, setAmount] = useState(() => (top ? top.amount + 1 : 20));
+  const [amountTouched, setAmountTouched] = useState(false);
   const [domain, setDomain] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [catOpen, setCatOpen] = useState(false);
@@ -188,8 +189,19 @@ export default function Overlay() {
     }
   }, []);
 
-  const setAmountSafe = (n: number) => setAmount(Math.max(1, Math.min(100000, Math.round(n))));
+  const setAmountSafe = (n: number) => {
+    setAmountTouched(true);
+    setAmount(Math.max(1, Math.min(100000, Math.round(n))));
+  };
   const step = (dir: 1 | -1) => setAmountSafe(amount + dir);
+
+  // the suggested price always outgrows the current leader by $1, until the
+  // visitor picks their own amount
+  useEffect(() => {
+    if (amountTouched) return;
+    setAmount(top ? top.amount + 1 : 20);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [top?.amount, amountTouched]);
 
   const changeVolume = (v: number) => {
     setVolume(v);
@@ -311,7 +323,7 @@ export default function Overlay() {
       <div className="dock">
         <div className="dock__inner" ref={dockRef}>
           <h1 className="dock__title">
-            Plant your billboard for
+            Get the biggest billboard for
             <span className="meter">
               <button className="meter__step" onClick={() => step(-1)} aria-label="lower the amount by 1">
                 −
@@ -441,17 +453,7 @@ export default function Overlay() {
               </p>
             ))}
 
-          {/* the single line about #1 — click it to load the winning amount */}
-          {flash ? (
-            <p className="lede">{flash}</p>
-          ) : top ? (
-            <button className="lede lede--action" onClick={() => setAmountSafe(top.amount + 1)}>
-              {top.name} holds #1 with {fmtUSD(top.amount)} —{" "}
-              <span>outgrow them for {fmtUSD(top.amount + 1)}</span>
-            </button>
-          ) : (
-            <p className="lede">Be the first billboard on the highway.</p>
-          )}
+          {flash && <p className="lede">{flash}</p>}
         </div>
       </div>
 

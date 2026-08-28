@@ -164,6 +164,94 @@ export function makeFaceTexture(opts: {
   return tex;
 }
 
+// draws text with manual letter-spacing — canvas has no tracking property
+function fillTracked(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, spacing: number) {
+  const widths = [...text].map((ch) => ctx.measureText(ch).width);
+  const total = widths.reduce((a, b) => a + b, 0) + spacing * (text.length - 1);
+  const align = ctx.textAlign;
+  ctx.textAlign = "left";
+  let x = cx - total / 2;
+  for (let i = 0; i < text.length; i++) {
+    ctx.fillText(text[i], x, y);
+    x += widths[i] + spacing;
+  }
+  ctx.textAlign = align;
+}
+
+// Empty-slot face: same warm paper + hard ink edge + Outfit type as the rest of
+// the UI, so an unclaimed billboard reads as "ours, waiting" rather than a
+// generic dashed-border placeholder. One canvas, shared by every empty slot —
+// unlike makeFaceTexture it never varies per-billboard, so it's drawn once.
+let placeholderTex: THREE.CanvasTexture | null = null;
+
+export function getPlaceholderFaceTexture(res: number): THREE.CanvasTexture {
+  if (placeholderTex) return placeholderTex;
+
+  const W = res;
+  const H = Math.round(W * 0.53);
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+  const LW = 1024;
+  const LH = LW * 0.53;
+  ctx.scale(W / LW, H / LH);
+  const family = uiFont();
+  const font = (w: number, s: number) => `${w} ${s}px ${family}`;
+
+  const ink = "#11151c";
+  const inkSoft = "rgba(17,21,28,0.5)";
+  const paper = "#fffaf0";
+  const marking = "#f2b632";
+
+  ctx.fillStyle = paper;
+  ctx.fillRect(0, 0, LW, LH);
+
+  // one clean inset ink border — a printed edge, not a dashed cutout
+  const inset = 24;
+  ctx.lineWidth = 9;
+  ctx.strokeStyle = ink;
+  ctx.beginPath();
+  ctx.roundRect(inset, inset, LW - inset * 2, LH - inset * 2, 30);
+  ctx.stroke();
+
+  // the wordmark's own little billboard glyph, centered above the headline
+  const gs = 68;
+  const gx = LW / 2 - gs / 2;
+  const gy = LH * 0.24;
+  ctx.fillStyle = ink;
+  ctx.beginPath();
+  ctx.roundRect(gx, gy, gs, gs, 12);
+  ctx.fill();
+  ctx.fillStyle = marking;
+  ctx.beginPath();
+  ctx.roundRect(gx + 5, gy + 5, gs - 10, (gs - 10) * 0.55, 6);
+  ctx.fill();
+  ctx.fillStyle = paper;
+  ctx.beginPath();
+  ctx.roundRect(gx + 5, gy + 5 + (gs - 10) * 0.55, gs - 10, (gs - 10) * 0.45 - 5, 6);
+  ctx.fill();
+  ctx.fillStyle = ink;
+  ctx.fillRect(LW / 2 - 3, gy + gs, 6, 18);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = ink;
+  ctx.font = font(700, 68);
+  ctx.fillText("PLACE YOUR BILLBOARD HERE", LW / 2, LH * 0.63);
+
+  ctx.font = font(700, 27);
+  ctx.fillStyle = inkSoft;
+  fillTracked(ctx, "NOT CLAIMED YET", LW / 2, LH * 0.76, 4);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  placeholderTex = tex;
+  return tex;
+}
+
 // Towed banner: white strip, red border, the current leader spelled out.
 export function makeBannerTexture(text: string): THREE.CanvasTexture {
   const key = `banner|${text}`;
