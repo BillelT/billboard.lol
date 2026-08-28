@@ -15,11 +15,18 @@ import { vertexColorMat } from "./materials";
 // Scaled by the panel's own size because the camera rides closer to small ones.
 const textureRange = (panelW: number) => Math.max(150, panelW * 9);
 
+// Hover lightens the face towards this, on top of whatever's painted on it —
+// reads as a spotlight catching the panel rather than a colour swap.
+const HOVER_TINT = new THREE.Color("#fff6df");
+const HOVER_MIX = 0.32;
+
 function BillboardItem({ item }: { item: LayoutItem }) {
   const group = useRef<THREE.Group>(null);
   const face = useRef<THREE.MeshBasicMaterial>(null);
   const spawned = useRef(false);
   const painted = useRef<{ key: string; tex: THREE.CanvasTexture } | null>(null);
+  const baseColor = useRef(new THREE.Color(item.color));
+  const hoverLit = useRef(0);
 
   const geometry = useMemo(
     () => makeBillboardGeometry(item.panelW, item.panelH, item.poleH),
@@ -76,15 +83,22 @@ function BillboardItem({ item }: { item: LayoutItem }) {
       });
       painted.current = { key: texKey, tex };
       mat.map = tex;
-      mat.color.set("#ffffff");
+      baseColor.current.set("#ffffff");
       mat.needsUpdate = true;
     } else if (!near && painted.current) {
       painted.current.tex.dispose();
       painted.current = null;
       mat.map = null;
-      mat.color.set(item.color);
+      baseColor.current.set(item.color);
       mat.needsUpdate = true;
     }
+
+    // the panel itself lighting up on hover — the pole and frame get the real
+    // treatment from HoverSpot's spotlight, but that light doesn't touch this
+    // unlit face material, so it gets its own lerp toward a warm highlight
+    const hovered = interactionState.hovered === item.id;
+    hoverLit.current = THREE.MathUtils.damp(hoverLit.current, hovered ? 1 : 0, 8, dt);
+    mat.color.copy(baseColor.current).lerp(HOVER_TINT, hoverLit.current * HOVER_MIX);
   });
 
   return (
@@ -144,6 +158,7 @@ export default function Billboards({ layout }: { layout: SceneLayout }) {
   // It only needs to change when the layout itself changes.
   useEffect(() => {
     interactionState.targets = layout.items.map((it) => ({
+      id: it.id,
       rank: it.rank,
       amount: it.amount,
       x: it.x,
