@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { scrollState } from "@/lib/scrollState";
 import { debugState } from "@/lib/debugState";
+import { interactionState } from "@/lib/interactionState";
 import { BILL_Z, type SceneLayout } from "@/lib/layout";
 
 // One scroll value drives both the ride down the road and the descent from the
@@ -54,6 +55,9 @@ export default function CameraRig({ layout }: { layout: SceneLayout }) {
   }, [layout]);
 
   useFrame(({ camera }, dt) => {
+    // GrabNav raycasts against this on a tap — it lives outside the canvas
+    // and has no other way to reach the camera the rig is driving.
+    interactionState.camera = camera;
     const target = scrollState.target;
     let p = THREE.MathUtils.damp(progress.current, target, debugState.motion.follow, dt);
     // damping only ever approaches its target; snapping the last hair off keeps

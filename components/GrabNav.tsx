@@ -1,15 +1,72 @@
 "use client";
 import { useEffect, useRef } from "react";
+import type * as THREE from "three";
 import { debugState } from "@/lib/debugState";
+import { interactionState } from "@/lib/interactionState";
+import { BILL_Z } from "@/lib/layout";
+import { useStore } from "@/lib/store";
 
 // Horizontal drag on the scene = another way to drive down the highway.
 // It scrolls the page rather than touching scrollState directly, so the camera
 // rig, the scroll hint and the native scrollbar all stay in sync.
 const FRICTION = 0.94; // fling decay per frame
 const MIN_FLING = 0.05; // px/frame under which the fling stops
+const BOX_DEPTH = 3; // how forgiving a click is along the road's depth axis
+
+// The Scene chunk (dynamically imported, see Experience.tsx) already loads
+// three — this just grabs a reference to the same module instead of statically
+// importing it here, which would otherwise drag the whole library into the
+// main page bundle for a feature (tap-to-buy) that's dormant most of the time.
+let threeMod: typeof THREE | null = null;
+let loading: Promise<void> | null = null;
+function ensureThree() {
+  if (!threeMod && !loading) {
+    loading = import("three").then((m) => {
+      threeMod = m;
+    });
+  }
+  return threeMod;
+}
+
+function hitTest(clientX: number, clientY: number) {
+  const THREE = ensureThree();
+  const camera = interactionState.camera;
+  if (!THREE || !camera) return null;
+
+  const raycaster = new THREE.Raycaster();
+  const box = new THREE.Box3();
+  const hitPoint = new THREE.Vector3();
+  const ndc = new THREE.Vector2(
+    (clientX / window.innerWidth) * 2 - 1,
+    -(clientY / window.innerHeight) * 2 + 1,
+  );
+  raycaster.setFromCamera(ndc, camera);
+
+  let best = null as (typeof interactionState.targets)[number] | null;
+  let bestDist = Infinity;
+  for (const t of interactionState.targets) {
+    box.min.set(t.x - t.panelW / 2, 0, BILL_Z - BOX_DEPTH);
+    box.max.set(t.x + t.panelW / 2, t.poleH + t.panelH, BILL_Z + BOX_DEPTH);
+    const hit = raycaster.ray.intersectBox(box, hitPoint);
+    if (!hit) continue;
+    const d = camera.position.distanceTo(hit);
+    if (d < bestDist) {
+      bestDist = d;
+      best = t;
+    }
+  }
+  return best;
+}
 
 export default function GrabNav() {
   const surface = useRef<HTMLDivElement>(null);
+
+  // warm the module so the very first tap doesn't have to wait on it — in
+  // practice it's already resolved by the time anything is visible to tap,
+  // since the 3D scene itself can't render without it either.
+  useEffect(() => {
+    ensureThree();
+  }, []);
 
   useEffect(() => {
     const el = surface.current;
@@ -79,7 +136,12 @@ export default function GrabNav() {
       pointerId = null;
       el.releasePointerCapture?.(e.pointerId);
       el.classList.remove("grabbing");
-      if (moved && Math.abs(velocity) > MIN_FLING) raf = requestAnimationFrame(fling);
+      if (moved && Math.abs(velocity) > MIN_FLING) {
+        raf = requestAnimationFrame(fling);
+      } else if (!moved) {
+        const hit = hitTest(e.clientX, e.clientY);
+        if (hit) useStore.getState().openBuyModal({ rank: hit.rank, amount: hit.amount });
+      }
     };
 
     // a wheel with a horizontal component (trackpad swipe) is the same gesture as

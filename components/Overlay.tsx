@@ -58,7 +58,8 @@ export default function Overlay() {
   const layout = useMemo(() => computeLayout(billboards), [billboards]);
   const top = layout.items[0];
   const totalBurned = useMemo(() => billboards.reduce((a, b) => a + b.amount, 0), [billboards]);
-  const online = usePresence();
+  const realCount = useMemo(() => billboards.filter((b) => !b.placeholder).length, [billboards]);
+  const online = usePresence(realCount);
 
   const [amount, setAmount] = useState(() => (top ? top.amount + 1 : 20));
   const [amountTouched, setAmountTouched] = useState(false);
