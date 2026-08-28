@@ -115,6 +115,7 @@ body {
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
+  font-family: inherit;
   font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -125,6 +126,7 @@ body {
   border-radius: var(--r-md);
   padding: 8px 16px 8px 12px;
   box-shadow: var(--lift-1);
+  cursor: default;
   transition:
     transform 0.12s ease,
     box-shadow 0.12s ease;
