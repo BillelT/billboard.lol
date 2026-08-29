@@ -725,7 +725,7 @@ body {
     left: 16px;
     right: 16px;
     top: auto;
-    bottom: calc(var(--dock-h, 210px) + 12px);
+    bottom: calc(var(--dock-h, 210px) + 32px);
     transform: none;
     flex-direction: column;
     align-items: center;
@@ -733,9 +733,9 @@ body {
   }
   .gauge {
     justify-content: center;
-    width: 100%;
     max-width: 320px;
     font-size: 13px;
+    border-radius: var(--r-sm);
   }
   .gauge--tallest,
   .gauge--planted,
