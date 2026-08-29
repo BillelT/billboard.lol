@@ -76,9 +76,11 @@ export default function Overlay() {
   const [scrolled, setScrolled] = useState(false);
   const [sound, setSound] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [claimOpen, setClaimOpen] = useState(false);
   const dockRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLDivElement>(null);
   const catMeasureRef = useRef<HTMLDivElement>(null);
+  const domainRef = useRef<HTMLInputElement>(null);
 
   // publish the dock height so the gauge rail and the hint always clear it
   useEffect(() => {
@@ -288,8 +290,8 @@ export default function Overlay() {
           <span className="gauge__dot" aria-hidden="true" />
           {online} on the road
         </div>
-        <div className="gauge">Tallest is {top ? fmtFeet(top.totalH) : "—"}</div>
-        <div className="gauge">{realCount} billboards planted</div>
+        <div className="gauge gauge--tallest">Tallest is {top ? fmtFeet(top.totalH) : "—"}</div>
+        <div className="gauge gauge--planted">{realCount} billboards planted</div>
         <div className="gauge">{fmtUSD(totalBurned)} made</div>
         <div className="gauge">
           {visits !== null ? visits.toLocaleString("en-US") : "—"} visitors since launch
@@ -369,8 +371,9 @@ export default function Overlay() {
             </span>
           </h1>
 
-          <form className="claim" onSubmit={submit}>
+          <form className={`claim ${claimOpen ? "claim--open" : ""}`} onSubmit={submit}>
             <input
+              ref={domainRef}
               className="claim__domain"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
@@ -431,7 +434,20 @@ export default function Overlay() {
               )}
             </div>
 
-            <button type="submit" className="cta" disabled={busy}>
+            <button
+              type="submit"
+              className="cta"
+              disabled={busy}
+              onClick={(e) => {
+                // collapsed on mobile: the first tap just reveals the form —
+                // the input is display:none there, so offsetParent is null
+                if (!claimOpen && domainRef.current?.offsetParent === null) {
+                  e.preventDefault();
+                  setClaimOpen(true);
+                  requestAnimationFrame(() => domainRef.current?.focus());
+                }
+              }}
+            >
               {busy ? "…" : "Plant my billboard"}
             </button>
           </form>

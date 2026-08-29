@@ -8,6 +8,7 @@ const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 const outfit = localFont({
   src: [
     { path: "./fonts/Outfit-Regular.ttf", weight: "400", style: "normal" },
+    { path: "./fonts/Outfit-Medium.ttf", weight: "500", style: "normal" },
     { path: "./fonts/Outfit-Bold.ttf", weight: "700", style: "normal" },
   ],
   variable: "--font-outfit",

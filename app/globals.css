@@ -192,7 +192,7 @@ body {
   box-sizing: border-box;
   min-height: 34px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink);
   background: var(--paper-ghost);
   border: var(--edge-soft);
@@ -719,19 +719,27 @@ body {
 }
 
 @media (max-width: 720px) {
+  /* stacked and centered right above the dock, trimmed to the numbers that
+     matter at a glance — the rest stays a desktop-only rail */
   .gauges {
-    top: 76px;
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: calc(var(--dock-h, 210px) + 12px);
     transform: none;
-    flex-direction: row;
-    flex-wrap: wrap;
-    right: 18px;
+    flex-direction: column;
+    align-items: center;
     gap: 6px;
   }
-
   .gauge {
+    justify-content: center;
+    width: 100%;
+    max-width: 320px;
     font-size: 13px;
   }
-
+  .gauge--tallest,
+  .gauge--planted,
+  .gauge--sound,
   .gauge--sig,
   .hint {
     display: none;
@@ -740,10 +748,17 @@ body {
     gap: 10px;
     padding: 14px 14px 12px;
   }
+
+  /* collapsed by default: just the CTA. Tapping it reveals the domain field
+     and category picker instead of firing the checkout right away. */
   .claim {
     flex-wrap: wrap;
   }
-  .claim > input,
+  .claim:not(.claim--open) .claim__domain,
+  .claim:not(.claim--open) .cat {
+    display: none;
+  }
+  .claim__domain,
   .cta,
   .cat {
     width: 100%;
@@ -754,6 +769,16 @@ body {
   }
   .peek__note {
     display: none;
+  }
+
+  /* iOS Safari zooms the page in on focus of any text input/select under
+     16px — .claim__domain/.cat__trigger/.cta already clear it above, these
+     are the rest of the focusable text fields */
+  .cat__search,
+  .modal__input,
+  .modal__select,
+  .modal__cta {
+    font-size: 16px;
   }
 }
 
