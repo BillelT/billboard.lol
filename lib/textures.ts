@@ -118,7 +118,7 @@ export function makeFaceTexture(opts: {
   // so every element lines up against the same content box instead of each
   // picking its own inset
   const MARGIN_X = 64;
-  const MARGIN_Y = 40;
+  const MARGIN_Y = 28;
   ctx.scale(W / LW, H / LH);
   const family = uiFont();
   const font = (w: number, s: number) => `${w} ${s}px ${family}`;
@@ -196,7 +196,9 @@ export function makeFaceTexture(opts: {
   // domain name — right of the favicon, same row. Fixed size: it never
   // shrinks to fit, a name too long is truncated with an ellipsis instead.
   const nameX = tx + tile + 44;
-  const nameMaxW = LW - nameX - MARGIN_X;
+  // hold back a bit of extra width so a long name's tail clears the rank
+  // badge sitting above it instead of crowding into its digits
+  const nameMaxW = LW - nameX - MARGIN_X - 70;
   ctx.font = font(700, 80);
   const displayName = ellipsize(ctx, opts.name, nameMaxW);
   ctx.fillStyle = "#ffffff";
