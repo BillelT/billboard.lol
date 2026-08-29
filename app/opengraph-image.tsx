@@ -45,6 +45,29 @@ function shade(hex: string, f: number): string {
   return `#${[to255(r2), to255(g2), to255(b2)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
+// hex -> "r,g,b" for building rgba() strings in gradients
+function rgbTriplet(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+}
+
+// soft dark blob, transparent at the edge — the same ground-contact shadow
+// every prop in the 3D scene gets, so things planted in the grass read as
+// standing on it instead of pasted over it
+function GroundShadow({ width, height }: { width: number; height: number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        width,
+        height,
+        borderRadius: "50%",
+        background: "radial-gradient(ellipse, rgba(20,40,15,0.4) 0%, rgba(20,40,15,0) 72%)",
+      }}
+    />
+  );
+}
+
 // A low-poly pine, built the same way the CSS-only pieces of the UI are: plain
 // boxes and triangles, no images.
 function Pine({ left, bottom, scale }: { left: number; bottom: number; scale: number }) {
@@ -80,6 +103,9 @@ function Pine({ left, bottom, scale }: { left: number; bottom: number; scale: nu
         }}
       />
       <div style={{ display: "flex", width: 6 * s, height: 14 * s, background: PAL.trunk }} />
+      <div style={{ display: "flex", marginTop: -8 * s }}>
+        <GroundShadow width={30 * s} height={9 * s} />
+      </div>
     </div>
   );
 }
@@ -126,7 +152,7 @@ export default async function Image() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          background: `linear-gradient(180deg, ${PAL.skyTop} 0%, ${PAL.skyHorizon} 62%)`,
+          background: `radial-gradient(ellipse 700px 500px at 82% -8%, rgba(255,246,214,0.85) 0%, rgba(255,246,214,0) 55%), linear-gradient(180deg, ${shade(PAL.skyTop, -0.05)} 0%, ${PAL.skyTop} 38%, ${PAL.skyHorizon} 68%)`,
           fontFamily: "Outfit",
           position: "relative",
         }}
@@ -190,9 +216,26 @@ export default async function Image() {
               position: "relative",
               display: "flex",
               flex: 1,
-              background: `linear-gradient(180deg, ${PAL.grassLight} 0%, ${PAL.grass} 100%)`,
+              // mowed-lawn stripes for real texture, plus a couple of soft
+              // darker patches so the fill still reads as ground, not wallpaper
+              background: `radial-gradient(ellipse 260px 100px at 12% 20%, rgba(${rgbTriplet(PAL.grassDark)},0.3) 0%, rgba(${rgbTriplet(PAL.grassDark)},0) 70%), radial-gradient(ellipse 300px 110px at 90% 65%, rgba(${rgbTriplet(PAL.grassDark)},0.26) 0%, rgba(${rgbTriplet(PAL.grassDark)},0) 70%), repeating-linear-gradient(70deg, rgba(${rgbTriplet(PAL.grassDark)},0.16) 0px, rgba(${rgbTriplet(PAL.grassDark)},0.16) 26px, rgba(255,255,255,0) 26px, rgba(255,255,255,0) 52px), linear-gradient(180deg, ${PAL.grassLight} 0%, ${PAL.grass} 100%)`,
             }}
           >
+            {/* the road receding to the horizon, continuing the flat lane
+                below up into the distance — the same driving-toward-it feel
+                the real highway has, not a road painted flat on a card */}
+            <div
+              style={{
+                position: "absolute",
+                display: "flex",
+                left: 0,
+                top: 0,
+                width: 1200,
+                height: 121,
+                background: `linear-gradient(180deg, ${shade(PAL.road, -0.1)} 0%, ${PAL.road} 100%)`,
+                clipPath: "polygon(555px 0px, 645px 0px, 860px 121px, 340px 121px)",
+              }}
+            />
             {pines.map((p, i) => (
               <Pine key={i} {...p} />
             ))}
@@ -271,28 +314,51 @@ export default async function Image() {
             and price, the same content the real billboard face shows */}
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center" }}>
           {leader ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              {/* floodlights, standing in for the real ones on top of the panel */}
-              <div style={{ display: "flex", gap: panelW * 0.26, marginBottom: 6 }}>
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    style={{ display: "flex", width: 14, height: 20, borderRadius: 3, background: PAL.lamp }}
-                  />
-                ))}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                transform: "rotate(-1.6deg)",
+              }}
+            >
+              {/* floodlights, lit — the same warm glow they get on hover in
+                  the real scene, cast down onto the cap below them. Plain
+                  flex + negative margin to overlap, same trick the cap/panel
+                  below already use — satori doesn't reliably center an
+                  absolutely-positioned child via left:50%+transform. */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    width: panelW * 0.9,
+                    height: 46,
+                    borderRadius: "50%",
+                    background: "radial-gradient(ellipse, rgba(255,246,221,0.6) 0%, rgba(255,246,221,0) 70%)",
+                  }}
+                />
+                <div style={{ display: "flex", gap: panelW * 0.26, marginTop: -28, marginBottom: 6 }}>
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      style={{ display: "flex", width: 14, height: 20, borderRadius: 3, background: PAL.lamp }}
+                    />
+                  ))}
+                </div>
               </div>
               <div
                 style={{
                   display: "flex",
                   width: panelW * 1.05,
                   height: 9,
-                  background: PAL.steel,
+                  background: `linear-gradient(180deg, ${PAL.steel} 0%, ${PAL.steelDark} 100%)`,
                   borderRadius: 3,
                   marginBottom: -3,
                 }}
               />
               <div
                 style={{
+                  position: "relative",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
@@ -303,8 +369,19 @@ export default async function Image() {
                   borderRadius: 14,
                   boxShadow: "0 24px 50px rgba(31,39,51,0.28)",
                   padding: "0 30px",
+                  overflow: "hidden",
                 }}
               >
+                {/* glossy highlight, the glint a lit plastic panel catches */}
+                <div
+                  style={{
+                    position: "absolute",
+                    display: "flex",
+                    inset: 0,
+                    background:
+                      "radial-gradient(circle at 22% 15%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 62%)",
+                  }}
+                />
                 <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
                   <div
                     style={{
@@ -349,6 +426,17 @@ export default async function Image() {
                   <div key={k} style={{ display: "flex", width: 16, height: 60, background: PAL.steelDark }} />
                 ))}
               </div>
+              <div style={{ display: "flex", marginTop: -22 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    width: panelW * 0.92,
+                    height: 40,
+                    borderRadius: "50%",
+                    background: "radial-gradient(ellipse, rgba(15,30,10,0.5) 0%, rgba(15,30,10,0) 72%)",
+                  }}
+                />
+              </div>
             </div>
           ) : (
             <div style={{ display: "flex", color: "#3d5240", fontSize: 34, fontWeight: 700 }}>
@@ -367,7 +455,8 @@ export default async function Image() {
             justifyContent: "center",
             fontSize: 26,
             fontWeight: 700,
-            color: "#3d5240",
+            color: "#ffffff",
+            textShadow: "0 2px 6px rgba(0,0,0,0.35)",
           }}
         >
           pay more · get bigger · get seen first
