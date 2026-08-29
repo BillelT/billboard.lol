@@ -45,6 +45,29 @@ function shade(hex: string, f: number): string {
   return `#${[to255(r2), to255(g2), to255(b2)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
+// hex -> "r,g,b" for building rgba() strings in gradients
+function rgbTriplet(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+}
+
+// soft dark blob, transparent at the edge — the same ground-contact shadow
+// every prop in the 3D scene gets, so things planted in the grass read as
+// standing on it instead of pasted over it
+function GroundShadow({ width, height }: { width: number; height: number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        width,
+        height,
+        borderRadius: "50%",
+        background: "radial-gradient(ellipse, rgba(20,40,15,0.4) 0%, rgba(20,40,15,0) 72%)",
+      }}
+    />
+  );
+}
+
 // A low-poly pine, built the same way the CSS-only pieces of the UI are: plain
 // boxes and triangles, no images.
 function Pine({ left, bottom, scale }: { left: number; bottom: number; scale: number }) {
@@ -80,6 +103,9 @@ function Pine({ left, bottom, scale }: { left: number; bottom: number; scale: nu
         }}
       />
       <div style={{ display: "flex", width: 6 * s, height: 14 * s, background: PAL.trunk }} />
+      <div style={{ display: "flex", marginTop: -8 * s }}>
+        <GroundShadow width={30 * s} height={9 * s} />
+      </div>
     </div>
   );
 }
@@ -190,7 +216,9 @@ export default async function Image() {
               position: "relative",
               display: "flex",
               flex: 1,
-              background: `linear-gradient(180deg, ${PAL.grassLight} 0%, ${PAL.grass} 100%)`,
+              // a couple of soft darker patches break up the flat fill, the
+              // same mottled look the real ground texture has
+              background: `radial-gradient(ellipse 260px 100px at 12% 20%, rgba(${rgbTriplet(PAL.grassDark)},0.32) 0%, rgba(${rgbTriplet(PAL.grassDark)},0) 70%), radial-gradient(ellipse 300px 110px at 90% 65%, rgba(${rgbTriplet(PAL.grassDark)},0.28) 0%, rgba(${rgbTriplet(PAL.grassDark)},0) 70%), linear-gradient(180deg, ${PAL.grassLight} 0%, ${PAL.grass} 100%)`,
             }}
           >
             {pines.map((p, i) => (
@@ -272,27 +300,43 @@ export default async function Image() {
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center" }}>
           {leader ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              {/* floodlights, standing in for the real ones on top of the panel */}
-              <div style={{ display: "flex", gap: panelW * 0.26, marginBottom: 6 }}>
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    style={{ display: "flex", width: 14, height: 20, borderRadius: 3, background: PAL.lamp }}
-                  />
-                ))}
+              {/* floodlights, lit — the same warm glow they get on hover in
+                  the real scene, cast down onto the cap below them. Plain
+                  flex + negative margin to overlap, same trick the cap/panel
+                  below already use — satori doesn't reliably center an
+                  absolutely-positioned child via left:50%+transform. */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    width: panelW * 0.9,
+                    height: 46,
+                    borderRadius: "50%",
+                    background: "radial-gradient(ellipse, rgba(255,246,221,0.6) 0%, rgba(255,246,221,0) 70%)",
+                  }}
+                />
+                <div style={{ display: "flex", gap: panelW * 0.26, marginTop: -28, marginBottom: 6 }}>
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      style={{ display: "flex", width: 14, height: 20, borderRadius: 3, background: PAL.lamp }}
+                    />
+                  ))}
+                </div>
               </div>
               <div
                 style={{
                   display: "flex",
                   width: panelW * 1.05,
                   height: 9,
-                  background: PAL.steel,
+                  background: `linear-gradient(180deg, ${PAL.steel} 0%, ${PAL.steelDark} 100%)`,
                   borderRadius: 3,
                   marginBottom: -3,
                 }}
               />
               <div
                 style={{
+                  position: "relative",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
@@ -303,8 +347,19 @@ export default async function Image() {
                   borderRadius: 14,
                   boxShadow: "0 24px 50px rgba(31,39,51,0.28)",
                   padding: "0 30px",
+                  overflow: "hidden",
                 }}
               >
+                {/* glossy highlight, the glint a lit plastic panel catches */}
+                <div
+                  style={{
+                    position: "absolute",
+                    display: "flex",
+                    inset: 0,
+                    background:
+                      "radial-gradient(circle at 22% 15%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 62%)",
+                  }}
+                />
                 <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
                   <div
                     style={{
@@ -348,6 +403,9 @@ export default async function Image() {
                 {[0, 1].map((k) => (
                   <div key={k} style={{ display: "flex", width: 16, height: 60, background: PAL.steelDark }} />
                 ))}
+              </div>
+              <div style={{ display: "flex", marginTop: -14 }}>
+                <GroundShadow width={panelW * 0.62} height={26} />
               </div>
             </div>
           ) : (
