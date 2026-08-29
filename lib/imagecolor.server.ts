@@ -1,5 +1,6 @@
 import "server-only";
 import { inflateSync } from "node:zlib";
+import { relLuminance } from "./color";
 
 // Dominant-colour extraction for favicons, with a dependency-free PNG decoder.
 // A favicon is at most a couple hundred pixels wide, so a plain JS decode costs
@@ -172,14 +173,6 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-function relLuminance(hex: string): number {
-  const ch = (i: number) => {
-    const v = parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255;
-    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * ch(0) + 0.7152 * ch(1) + 0.0722 * ch(2);
-}
-
 // The billboard face carries white text over this colour, so the extracted hue is
 // kept as-is and only its saturation and lightness move — first into a plausible
 // signage band, then down until white text clears ~3.4:1 (yellows need it most).
@@ -213,6 +206,8 @@ export function dominantColor(bytes: Uint8Array): string | null {
   const sumY = new Float64Array(BUCKETS);
   let grayL = 0;
   let grayN = 0;
+  let sampledN = 0;
+  let transparentN = 0;
 
   // stride-sample so a 512px apple-touch-icon costs the same as a 32px favicon
   const step = Math.max(1, Math.floor(Math.sqrt((bmp.width * bmp.height) / 16384)));
@@ -220,7 +215,11 @@ export function dominantColor(bytes: Uint8Array): string | null {
     for (let x = 0; x < bmp.width; x += step) {
       const o = (y * bmp.width + x) * 4;
       const a = bmp.data[o + 3];
-      if (a < 128) continue;
+      sampledN++;
+      if (a < 128) {
+        transparentN++;
+        continue;
+      }
       const [h, s, l] = rgbToHsl(bmp.data[o], bmp.data[o + 1], bmp.data[o + 2]);
       if (s < 0.16 || l > 0.94 || l < 0.06) {
         // near-white is background; everything else feeds the monochrome fallback
@@ -252,7 +251,13 @@ export function dominantColor(bytes: Uint8Array): string | null {
 
   if (best < 0) {
     if (!grayN) return null;
-    // black/white logo: a dark neutral slate, the same hue family as the UI
+    // a favicon that's mostly transparent is a mark meant to float on
+    // whatever's behind it (usually a white site) — a dark slate would be
+    // reading a colour into an icon that never had one, so go light instead
+    if (sampledN > 0 && transparentN / sampledN > 0.5) {
+      return hslToHex(0.61, 0.08, 0.94);
+    }
+    // opaque black/white logo: a dark neutral slate, the same hue family as the UI
     const l = grayL / grayN;
     return hslToHex(0.61, 0.14, Math.max(0.24, Math.min(0.34, l * 0.5 + 0.16)));
   }

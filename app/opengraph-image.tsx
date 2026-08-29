@@ -4,6 +4,7 @@ import { ImageResponse } from "next/og";
 import { getRanking } from "@/lib/ranking.server";
 import { fmtUSD } from "@/lib/layout";
 import { PAL } from "@/lib/palette";
+import { textColorFor } from "@/lib/color";
 
 export const alt = "The current bidboard.lol podium";
 export const size = { width: 1200, height: 630 };
@@ -134,6 +135,8 @@ export default async function Image() {
   const nameFont = leader ? Math.min(46, Math.floor(nameMaxW / (displayName.length * 0.52))) : 46;
   const taglineMaxChars = Math.max(10, Math.floor(nameMaxW / (22 * 0.52)));
   const tagline = leader ? truncate(leader.description ?? leader.title ?? "your ad, but bigger", taglineMaxChars) : "";
+  const ink = leader ? textColorFor(leader.color) : "#ffffff";
+  const inkSoft = ink === "#ffffff" ? "rgba(255,255,255,0.82)" : "rgba(31,39,51,0.68)";
 
   const pines = [
     { left: 30, bottom: 96, scale: 1.3 },
@@ -400,10 +403,10 @@ export default async function Image() {
                     {leader.name.charAt(0).toUpperCase()}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column" }}>
-                    <div style={{ display: "flex", color: "#fff", fontSize: nameFont, letterSpacing: -0.5 }}>
+                    <div style={{ display: "flex", color: ink, fontSize: nameFont, letterSpacing: -0.5 }}>
                       {displayName}
                     </div>
-                    <div style={{ display: "flex", color: "rgba(255,255,255,0.82)", fontSize: 22, marginTop: 6 }}>
+                    <div style={{ display: "flex", color: inkSoft, fontSize: 22, marginTop: 6 }}>
                       {tagline}
                     </div>
                   </div>
@@ -414,7 +417,7 @@ export default async function Image() {
                     alignItems: "baseline",
                     justifyContent: "space-between",
                     marginTop: 22,
-                    color: "#fff",
+                    color: ink,
                   }}
                 >
                   <div style={{ display: "flex", fontSize: 58, fontWeight: 900 }}>#1</div>

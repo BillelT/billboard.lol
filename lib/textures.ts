@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { fmtUSD } from "./layout";
+import { textColorFor } from "./color";
 
 // Topfloor-style ad face: brand color panel (picked from the site's favicon), the
 // real favicon in a white tile + the domain and the site's own SEO line on the
@@ -123,6 +124,16 @@ export function makeFaceTexture(opts: {
   const family = uiFont();
   const font = (w: number, s: number) => `${w} ${s}px ${family}`;
 
+  // card text is white on a dark/saturated background, or this dark ink on the
+  // light neutral handed out for logos meant to float on white
+  const ink = textColorFor(opts.color);
+  const isLight = ink !== "#ffffff";
+  const inkSoft = isLight ? "rgba(31,39,51,0.68)" : "rgba(255,255,255,0.78)";
+  const inkFaint = isLight ? "rgba(31,39,51,0.62)" : "rgba(255,255,255,0.80)";
+  const textShadow = isLight ? "transparent" : "rgba(0,0,0,0.18)";
+  const pillBg = isLight ? "rgba(31,39,51,0.10)" : "rgba(255,255,255,0.18)";
+  const pillBorder = isLight ? "rgba(31,39,51,0.35)" : "rgba(255,255,255,0.4)";
+
   // background: subtle vertical ramp of the brand color
   const bg = ctx.createLinearGradient(0, 0, 0, LH);
   bg.addColorStop(0, shade(opts.color, 0.06));
@@ -169,9 +180,9 @@ export function makeFaceTexture(opts: {
   // what carries the hierarchy, this is just a label
   ctx.textAlign = "right";
   ctx.textBaseline = "top";
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = ink;
   ctx.font = font(600, 72);
-  ctx.shadowColor = "rgba(0,0,0,0.18)";
+  ctx.shadowColor = textShadow;
   ctx.shadowOffsetY = 3;
   ctx.fillText(`#${opts.rank}`, LW - MARGIN_X, MARGIN_Y);
   ctx.shadowColor = "transparent";
@@ -184,10 +195,10 @@ export function makeFaceTexture(opts: {
   const nameMaxW = LW - nameX - MARGIN_X - 70;
   ctx.font = font(700, 80);
   const displayName = ellipsize(ctx, opts.name, nameMaxW);
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = ink;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.shadowColor = "rgba(0,0,0,0.18)";
+  ctx.shadowColor = textShadow;
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 4;
   ctx.fillText(displayName, nameX, ty + tile / 2);
@@ -197,7 +208,7 @@ export function makeFaceTexture(opts: {
   // the full panel width instead of just the name's column
   const tagline = opts.description ?? opts.title ?? "your ad, but bigger";
   ctx.font = font(400, 34);
-  ctx.fillStyle = "rgba(255,255,255,0.78)";
+  ctx.fillStyle = inkSoft;
   const taglineLineH = 42;
   const taglineY = ty + tile + 40;
   const descriptionMaxW = LW - tx - MARGIN_X;
@@ -215,7 +226,7 @@ export function makeFaceTexture(opts: {
   if (opts.clickCount != null) statParts.push(`${opts.clickCount.toLocaleString("en-US")} clicks`);
   if (statParts.length) {
     ctx.font = font(400, 28);
-    ctx.fillStyle = "rgba(255,255,255,0.80)";
+    ctx.fillStyle = inkFaint;
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.fillText(statParts.join("  ·  "), tx, bottomY);
@@ -234,25 +245,25 @@ export function makeFaceTexture(opts: {
     const pillW = ctx.measureText(clipped).width + padX * 2;
     const px = (LW - pillW) / 2;
     const py = bottomY - pillH;
-    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.fillStyle = pillBg;
     ctx.beginPath();
     ctx.roundRect(px, py, pillW, pillH, pillH / 2);
     ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.4)";
+    ctx.strokeStyle = pillBorder;
     ctx.lineWidth = 2;
     ctx.stroke();
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = ink;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     ctx.fillText(clipped, px + padX, py + pillH / 2 + 1);
   }
 
-  // price — discreet but still legible, still white
+  // price — discreet but still legible
   ctx.textAlign = "right";
   ctx.textBaseline = "bottom";
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = ink;
   ctx.font = font(500, 40);
-  ctx.shadowColor = "rgba(0,0,0,0.18)";
+  ctx.shadowColor = textShadow;
   ctx.shadowOffsetY = 3;
   ctx.fillText(fmtUSD(opts.amount), LW - MARGIN_X, bottomY);
   ctx.shadowColor = "transparent";
