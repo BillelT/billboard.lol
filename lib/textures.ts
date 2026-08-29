@@ -130,11 +130,9 @@ export function makeFaceTexture(opts: {
   ctx.strokeRect(18, 18, LW - 36, LH - 36);
 
   // favicon tile — the real icon of the domain, with the monogram as fallback.
-  // Stacked above the name/description instead of beside them, so both get
-  // the full panel width.
-  const tile = 150;
+  const tile = 200;
   const tx = 64;
-  const ty = 96;
+  const ty = 150;
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.roundRect(tx, ty, tile, tile, 40);
@@ -158,7 +156,7 @@ export function makeFaceTexture(opts: {
     ctx.restore();
   } else {
     ctx.fillStyle = opts.color;
-    ctx.font = font(700, 94);
+    ctx.font = font(700, 125);
     ctx.fillText(opts.name.charAt(0).toUpperCase(), tx + tile / 2, ty + tile / 2 + 8);
   }
 
@@ -197,35 +195,28 @@ export function makeFaceTexture(opts: {
   ctx.fillText(`#${opts.rank}`, LW - 64, 42 + 19);
   ctx.shadowColor = "transparent";
 
-  // domain name — below the favicon, not beside it, now spanning the full
-  // panel width
-  const nameX = tx;
-  const nameMaxW = LW - nameX - 64;
-  const nameY = ty + tile + 90;
-  let size = 96;
-  ctx.font = font(700, size);
-  while (size > 34 && ctx.measureText(opts.name).width > nameMaxW) {
-    size -= 4;
-    ctx.font = font(700, size);
-  }
+  // domain name — right of the favicon, same row. Fixed size: it never
+  // shrinks to fit, a name too long is truncated with an ellipsis instead.
+  const nameX = tx + tile + 44;
+  const nameMaxW = LW - nameX - 48;
+  ctx.font = font(700, 80);
   const displayName = ellipsize(ctx, opts.name, nameMaxW);
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
+  ctx.textBaseline = "middle";
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 4;
-  ctx.fillText(displayName, nameX, nameY);
+  ctx.fillText(displayName, nameX, ty + tile * 0.32);
   ctx.shadowColor = "transparent";
 
-  // the site's own SEO line, under the name — same full width, wrapped over
-  // up to 3 lines
+  // the site's own SEO line, under the name
   const tagline = opts.description ?? opts.title ?? "your ad, but bigger";
   ctx.font = font(400, 34);
   ctx.fillStyle = "rgba(255,255,255,0.78)";
-  const taglineLineH = 40;
-  const taglineY = nameY + 46;
-  const descriptionMaxW = LW - nameX - 64;
+  const taglineLineH = 42;
+  const taglineY = ty + tile * 0.68;
+  const descriptionMaxW = LW - nameX - 48;
   for (const [i, line] of wrapLines(ctx, tagline, descriptionMaxW, 3).entries()) {
     ctx.fillText(line, nameX, taglineY + i * taglineLineH);
   }
