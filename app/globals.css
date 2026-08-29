@@ -783,10 +783,6 @@ body {
 }
 
 @media (max-width: 600px) {
-  .masthead {
-    justify-content: left;
-  }
-
   .dock__title {
     font-size: 18px;
   }
