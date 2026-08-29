@@ -217,6 +217,16 @@ export default function Overlay() {
     sceneAudio.setVolume(v);
   };
 
+  // What rank the entered amount would actually take among the real, claimed
+  // billboards (placeholders aren't competitors). Shown once the visitor has
+  // touched the amount — before that the suggested price is already set to
+  // just beat #1, so "biggest billboard" already says it plainly.
+  const realBillboards = useMemo(() => billboards.filter((b) => !b.placeholder), [billboards]);
+  const rank = useMemo(
+    () => realBillboards.filter((b) => b.amount >= amount).length + 1,
+    [realBillboards, amount],
+  );
+
   const filteredCategories = useMemo(
     () => CATEGORIES.filter((c) => c.toLowerCase().includes(catQuery.trim().toLowerCase())),
     [catQuery],
@@ -330,7 +340,7 @@ export default function Overlay() {
       <div className="dock">
         <div className="dock__inner" ref={dockRef}>
           <h1 className="dock__title">
-            Get the biggest billboard for
+            {amountTouched ? `Get rank #${rank} for` : "Get the biggest billboard for"}
             <span className="meter">
               <button className="meter__step" onClick={() => step(-1)} aria-label="lower the amount by 1">
                 −
