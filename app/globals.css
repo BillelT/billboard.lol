@@ -89,6 +89,10 @@ body {
   z-index: 1;
   cursor: grab;
   touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
 }
 .grabzone.grabbing {
   cursor: grabbing;
@@ -188,7 +192,7 @@ body {
   box-sizing: border-box;
   min-height: 34px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink);
   background: var(--paper-ghost);
   border: var(--edge-soft);
@@ -440,10 +444,19 @@ body {
   gap: 8px;
   width: 100%;
   position: relative;
+  transition: transform 0.2s ease;
+}
+.claim--dragging {
+  transition: none;
+}
+/* the reveal-on-tap sheet's own dismiss affordance — drag it back down to
+   collapse. Hidden outside the collapsed mobile flow. */
+.claim__handle {
+  display: none;
 }
 .claim > input {
   font: inherit;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
   flex: 1 1 auto;
   min-width: 0;
@@ -478,7 +491,7 @@ body {
 }
 .cat__trigger {
   font: inherit;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
   width: 100%;
   height: 100%;
@@ -587,8 +600,8 @@ body {
 
 .cta {
   font: inherit;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   flex: 0 0 auto;
   padding: 12px 20px;
   border: var(--edge);
@@ -715,15 +728,40 @@ body {
 }
 
 @media (max-width: 720px) {
+  /* stacked and centered right above the dock, trimmed to the numbers that
+     matter at a glance — the rest stays a desktop-only rail */
   .gauges {
+    left: 16px;
+    right: 16px;
     top: auto;
-    bottom: calc(var(--dock-h, 210px) + 30px);
+    bottom: calc(var(--dock-h, 210px) + 32px);
     transform: none;
-    flex-direction: row;
-    flex-wrap: wrap;
-    right: 18px;
+    flex-direction: column;
+    align-items: center;
     gap: 6px;
   }
+  .gauge {
+    justify-content: center;
+    max-width: 320px;
+    font-size: 13px;
+    /* floating and centered here, not docked to an edge — the flag-shaped
+       accent border only read right when it was flush against the rail */
+    border: var(--edge-soft);
+    border-radius: 999px;
+  }
+  /* narrowest at the top, widest right against the dock it feeds into */
+  .gauge--made {
+    order: 1;
+  }
+  .gauge--live {
+    order: 2;
+  }
+  .gauge--visitors {
+    order: 3;
+  }
+  .gauge--tallest,
+  .gauge--planted,
+  .gauge--sound,
   .gauge--sig,
   .hint {
     display: none;
@@ -732,20 +770,75 @@ body {
     gap: 10px;
     padding: 14px 14px 12px;
   }
+
+  /* collapsed by default: just the CTA. Tapping it reveals the domain field
+     and category picker instead of firing the checkout right away. */
   .claim {
     flex-wrap: wrap;
   }
-  .claim > input,
+  .claim:not(.claim--open) .claim__domain,
+  .claim:not(.claim--open) .cat {
+    display: none;
+  }
+  .claim__domain,
   .cta,
   .cat {
     width: 100%;
     flex: 1 0 100%;
+  }
+  /* drag handle: an Apple-sheet-style grip above the fields, only present
+     once the form is open — dragging it down past the threshold closes it */
+  .claim--open .claim__handle {
+    display: flex;
+    order: -1;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    flex: 1 0 100%;
+    padding: 2px 0 10px;
+    margin: -6px 0 -4px;
+    cursor: grab;
+    touch-action: none;
+  }
+  .claim__handle::after {
+    content: "";
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--ink-3);
+  }
+  .claim--dragging .claim__handle {
+    cursor: grabbing;
   }
   .cat__panel {
     width: 100%;
   }
   .peek__note {
     display: none;
+  }
+
+  /* iOS Safari zooms the page in on focus of any text input/select under
+     16px — .claim__domain/.cat__trigger/.cta already clear it above, these
+     are the rest of the focusable text fields */
+  .cat__search,
+  .modal__input,
+  .modal__select,
+  .modal__cta {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .dock__title {
+    font-size: 18px;
+  }
+
+  .claim > input {
+    padding: 10px 12px;
+  }
+
+  .cat__trigger {
+    padding: 10px 12px;
   }
 }
 
