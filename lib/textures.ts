@@ -131,8 +131,8 @@ export function makeFaceTexture(opts: {
 
   // favicon tile — the real icon of the domain, with the monogram as fallback.
   const tile = 170;
-  const tx = 64;
-  const ty = 112;
+  const tx = 48;
+  const ty = 96;
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.roundRect(tx, ty, tile, tile, 34);
@@ -141,7 +141,7 @@ export function makeFaceTexture(opts: {
   ctx.textBaseline = "middle";
   const icon = opts.icon;
   if (icon && icon.complete) {
-    const pad = 24;
+    const pad = 20;
     const box = tile - pad * 2;
     const iw = icon.naturalWidth || box;
     const ih = icon.naturalHeight || box;
@@ -150,7 +150,7 @@ export function makeFaceTexture(opts: {
     const h = ih * k;
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(tx, ty, tile, tile, 34);
+    ctx.roundRect(tx, ty, tile, tile, 200);
     ctx.clip();
     ctx.drawImage(icon, tx + (tile - w) / 2, ty + (tile - h) / 2, w, h);
     ctx.restore();
@@ -189,7 +189,7 @@ export function makeFaceTexture(opts: {
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#ffffff";
-  ctx.font = font(700, 52);
+  ctx.font = font(700, 60);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowOffsetY = 3;
   ctx.fillText(`#${opts.rank}`, LW - 64, 42 + 19);
@@ -226,7 +226,7 @@ export function makeFaceTexture(opts: {
   ctx.textAlign = "right";
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#ffffff";
-  ctx.font = font(700, 58);
+  ctx.font = font(700, 48);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowOffsetY = 3;
   ctx.fillText(fmtUSD(opts.amount), LW - 64, LH - 46);
