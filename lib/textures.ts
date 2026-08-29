@@ -114,6 +114,11 @@ export function makeFaceTexture(opts: {
   // draw in a fixed 1024-wide design space whatever the real resolution is
   const LW = 1024;
   const LH = LW * 0.53;
+  // one shared margin on every edge — same left/right, same top/bottom —
+  // so every element lines up against the same content box instead of each
+  // picking its own inset
+  const MARGIN_X = 64;
+  const MARGIN_Y = 40;
   ctx.scale(W / LW, H / LH);
   const family = uiFont();
   const font = (w: number, s: number) => `${w} ${s}px ${family}`;
@@ -144,8 +149,8 @@ export function makeFaceTexture(opts: {
 
   // favicon tile — the real icon of the domain, with the monogram as fallback.
   const tile = 170;
-  const tx = 48;
-  const ty = 96;
+  const tx = MARGIN_X;
+  const ty = MARGIN_Y;
   // nested-radius rule: the icon clip sits `pad` inside the container, so its
   // own corner radius is the container's minus that padding, not a separate
   // number picked by eye
@@ -177,21 +182,21 @@ export function makeFaceTexture(opts: {
     ctx.fillText(opts.name.charAt(0).toUpperCase(), tx + tile / 2, ty + tile / 2 + 8);
   }
 
-  // rank — top-right, same small scale as the category pill: the panel's own
-  // size is what carries the hierarchy, this is just a label
+  // rank — top-right, same top edge as the favicon: the panel's own size is
+  // what carries the hierarchy, this is just a label
   ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
+  ctx.textBaseline = "top";
   ctx.fillStyle = "#ffffff";
   ctx.font = font(600, 72);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowOffsetY = 3;
-  ctx.fillText(`#${opts.rank}`, LW - 64, 42 + 19);
+  ctx.fillText(`#${opts.rank}`, LW - MARGIN_X, MARGIN_Y);
   ctx.shadowColor = "transparent";
 
   // domain name — right of the favicon, same row. Fixed size: it never
   // shrinks to fit, a name too long is truncated with an ellipsis instead.
   const nameX = tx + tile + 44;
-  const nameMaxW = LW - nameX - 48;
+  const nameMaxW = LW - nameX - MARGIN_X;
   ctx.font = font(700, 80);
   const displayName = ellipsize(ctx, opts.name, nameMaxW);
   ctx.fillStyle = "#ffffff";
@@ -210,14 +215,14 @@ export function makeFaceTexture(opts: {
   ctx.fillStyle = "rgba(255,255,255,0.78)";
   const taglineLineH = 42;
   const taglineY = ty + tile + 40;
-  const descriptionMaxW = LW - tx - 64;
+  const descriptionMaxW = LW - tx - MARGIN_X;
   for (const [i, line] of wrapLines(ctx, tagline, descriptionMaxW, 3).entries()) {
     ctx.fillText(line, tx, taglineY + i * taglineLineH);
   }
 
   // bottom row: stats bottom-left (discreet), category pill bottom-center,
-  // price bottom-right — one shared baseline so the three read as one row
-  const rowY = LH - 64;
+  // price bottom-right — all three sit on the same bottom margin line
+  const bottomY = LH - MARGIN_Y;
 
   // freshness + total clicks — small and muted, just a footnote under the panel
   const statParts: string[] = [];
@@ -227,11 +232,13 @@ export function makeFaceTexture(opts: {
     ctx.font = font(400, 28);
     ctx.fillStyle = "rgba(255,255,255,0.80)";
     ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillText(statParts.join("  ·  "), tx, rowY);
+    ctx.textBaseline = "bottom";
+    ctx.fillText(statParts.join("  ·  "), tx, bottomY);
   }
 
-  // category pill — bottom-center, kept small: it's a label, not a headline
+  // category pill — bottom-center, kept small: it's a label, not a headline.
+  // Centered on the full panel width, which lines up with the content since
+  // the left/right margins match.
   if (opts.category) {
     const label = opts.category.toUpperCase();
     ctx.font = font(700, 24);
@@ -241,7 +248,7 @@ export function makeFaceTexture(opts: {
     const pillH = 38;
     const pillW = ctx.measureText(clipped).width + padX * 2;
     const px = (LW - pillW) / 2;
-    const py = rowY - pillH / 2;
+    const py = bottomY - pillH;
     ctx.fillStyle = "rgba(255,255,255,0.18)";
     ctx.beginPath();
     ctx.roundRect(px, py, pillW, pillH, pillH / 2);
@@ -257,12 +264,12 @@ export function makeFaceTexture(opts: {
 
   // price — discreet but still legible, still white
   ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
+  ctx.textBaseline = "bottom";
   ctx.fillStyle = "#ffffff";
   ctx.font = font(500, 40);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowOffsetY = 3;
-  ctx.fillText(fmtUSD(opts.amount), LW - 64, rowY);
+  ctx.fillText(fmtUSD(opts.amount), LW - MARGIN_X, bottomY);
   ctx.shadowColor = "transparent";
 
   const tex = new THREE.CanvasTexture(canvas);
