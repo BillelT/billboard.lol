@@ -133,9 +133,13 @@ export function makeFaceTexture(opts: {
   const tile = 170;
   const tx = 48;
   const ty = 96;
+  // nested-radius rule: the icon clip sits `pad` inside the container, so its
+  // own corner radius is the container's minus that padding, not a separate
+  // number picked by eye
+  const containerRadius = 34;
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
-  ctx.roundRect(tx, ty, tile, tile, 34);
+  ctx.roundRect(tx, ty, tile, tile, containerRadius);
   ctx.fill();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -150,7 +154,7 @@ export function makeFaceTexture(opts: {
     const h = ih * k;
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(tx, ty, tile, tile, 200);
+    ctx.roundRect(tx + pad, ty + pad, box, box, Math.max(0, containerRadius - pad));
     ctx.clip();
     ctx.drawImage(icon, tx + (tile - w) / 2, ty + (tile - h) / 2, w, h);
     ctx.restore();
