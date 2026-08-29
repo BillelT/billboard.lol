@@ -447,7 +447,7 @@ body {
 }
 .claim > input {
   font: inherit;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
   flex: 1 1 auto;
   min-width: 0;
@@ -482,7 +482,7 @@ body {
 }
 .cat__trigger {
   font: inherit;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
   width: 100%;
   height: 100%;
@@ -591,8 +591,8 @@ body {
 
 .cta {
   font: inherit;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   flex: 0 0 auto;
   padding: 12px 20px;
   border: var(--edge);
@@ -720,14 +720,18 @@ body {
 
 @media (max-width: 720px) {
   .gauges {
-    top: auto;
-    bottom: calc(var(--dock-h, 210px) + 30px);
+    top: 76px;
     transform: none;
     flex-direction: row;
     flex-wrap: wrap;
     right: 18px;
     gap: 6px;
   }
+
+  .gauge {
+    font-size: 13px;
+  }
+
   .gauge--sig,
   .hint {
     display: none;
@@ -750,6 +754,24 @@ body {
   }
   .peek__note {
     display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .masthead {
+    justify-content: left;
+  }
+
+  .dock__title {
+    font-size: 18px;
+  }
+
+  .claim > input {
+    padding: 10px 12px;
+  }
+
+  .cat__trigger {
+    padding: 10px 12px;
   }
 }
 
