@@ -17,10 +17,13 @@ $$;
 
 grant execute on function bump_company_clicks(uuid) to anon, authenticated;
 
+-- total_amount stays last (its original position in the pre-existing view) —
+-- CREATE OR REPLACE VIEW can only append columns, not insert them before an
+-- existing one, or Postgres reads it as a rename and refuses.
 create or replace view current_ranking as
 select c.id, c.name, c.url, c.color, c.icon_url, c.title, c.description, c.category,
-       c.click_count, max(p.created_at) as claimed_at,
-       sum(p.amount) as total_amount
+       sum(p.amount) as total_amount,
+       c.click_count, max(p.created_at) as claimed_at
 from payments p
 join companies c on c.id = p.company_id
 where p.cycle_id = (select id from cycles order by starts_at desc limit 1)
