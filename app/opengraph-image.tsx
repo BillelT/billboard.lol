@@ -91,16 +91,23 @@ export default async function Image() {
     getRanking(),
     readFile(join(process.cwd(), "app/fonts/Outfit-Bold.ttf")),
   ]);
-  const podium = [...ranking].sort((a, b) => b.amount - a.amount).slice(0, 3);
-  const leader = podium[0];
-  const sizes = [
-    { w: 470, h: 264, name: 46, num: 62, tile: 78 },
-    { w: 300, h: 169, name: 31, num: 41, tile: 52 },
-    { w: 232, h: 130, name: 25, num: 33, tile: 42 },
-  ];
-  // shrink the domain until it fits next to the monogram tile
-  const nameSize = (name: string, s: (typeof sizes)[number]) =>
-    Math.min(s.name, Math.floor((s.w - s.tile - 76) / (name.length * 0.52)));
+  const leader = [...ranking].sort((a, b) => b.amount - a.amount)[0];
+
+  // one big billboard now, so it gets to be the tile size that used to belong
+  // to a leader sharing the frame with two smaller siblings
+  const panelW = 480;
+  const panelH = 255;
+  const tile = 82;
+
+  // JS-level truncation and shrink-to-fit sizing — reliable across renderers,
+  // unlike relying on CSS text-overflow inside satori. Same width budget
+  // (panel minus the tile and its gaps) backs both the name and the tagline.
+  const truncate = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+  const nameMaxW = panelW - tile - 76;
+  const displayName = leader ? truncate(leader.name, 24) : "";
+  const nameFont = leader ? Math.min(46, Math.floor(nameMaxW / (displayName.length * 0.52))) : 46;
+  const taglineMaxChars = Math.max(10, Math.floor(nameMaxW / (22 * 0.52)));
+  const tagline = leader ? truncate(leader.description ?? leader.title ?? "your ad, but bigger", taglineMaxChars) : "";
 
   const pines = [
     { left: 30, bottom: 96, scale: 1.3 },
@@ -119,7 +126,6 @@ export default async function Image() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
           background: `linear-gradient(180deg, ${PAL.skyTop} 0%, ${PAL.skyHorizon} 62%)`,
           fontFamily: "Outfit",
           position: "relative",
@@ -261,94 +267,94 @@ export default async function Image() {
           </div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-end",
-            justifyContent: "center",
-            gap: 30,
-            padding: "0 52px 96px",
-          }}
-        >
-          {podium.map((b, i) => {
-            const s = sizes[i];
-            return (
-              <div key={b.id} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    width: s.w * 1.05,
-                    height: Math.max(6, s.h * 0.028),
-                    background: PAL.steel,
-                    borderRadius: 3,
-                    marginBottom: -3,
-                  }}
-                />
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    width: s.w,
-                    height: s.h,
-                    background: `linear-gradient(180deg, ${shade(b.color, 0.07)} 0%, ${shade(b.color, -0.06)} 100%)`,
-                    border: `7px solid ${PAL.frame}`,
-                    borderRadius: 12,
-                    boxShadow: "0 18px 40px rgba(31,39,51,0.24)",
-                    padding: "0 22px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: s.tile,
-                        height: s.tile,
-                        background: "#fff",
-                        borderRadius: s.tile * 0.28,
-                        color: b.color,
-                        fontSize: s.tile * 0.6,
-                        fontWeight: 800,
-                      }}
-                    >
-                      {b.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        color: "#fff",
-                        fontSize: nameSize(b.name, s),
-                        letterSpacing: -0.5,
-                      }}
-                    >
-                      {b.name.length > 22 ? `${b.name.slice(0, 21)}…` : b.name}
-                    </div>
-                  </div>
+        {/* one dominant, centered billboard — #1's live name, tagline, rank
+            and price, the same content the real billboard face shows */}
+        <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center" }}>
+          {leader ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              {/* floodlights, standing in for the real ones on top of the panel */}
+              <div style={{ display: "flex", gap: panelW * 0.26, marginBottom: 6 }}>
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    style={{ display: "flex", width: 14, height: 20, borderRadius: 3, background: PAL.lamp }}
+                  />
+                ))}
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  width: panelW * 1.05,
+                  height: 9,
+                  background: PAL.steel,
+                  borderRadius: 3,
+                  marginBottom: -3,
+                }}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  width: panelW,
+                  height: panelH,
+                  background: `linear-gradient(180deg, ${shade(leader.color, 0.07)} 0%, ${shade(leader.color, -0.06)} 100%)`,
+                  border: `8px solid ${PAL.frame}`,
+                  borderRadius: 14,
+                  boxShadow: "0 24px 50px rgba(31,39,51,0.28)",
+                  padding: "0 30px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "baseline",
-                      justifyContent: "space-between",
-                      marginTop: 14,
-                      color: "#fff",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: tile,
+                      height: tile,
+                      background: "#fff",
+                      borderRadius: tile * 0.28,
+                      color: leader.color,
+                      fontSize: tile * 0.58,
+                      fontWeight: 800,
                     }}
                   >
-                    <div style={{ display: "flex", fontSize: s.num, fontWeight: 900 }}>#{i + 1}</div>
-                    <div style={{ display: "flex", fontSize: s.num * 0.85, fontWeight: 800 }}>
-                      {fmtUSD(b.amount)}
+                    {leader.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <div style={{ display: "flex", color: "#fff", fontSize: nameFont, letterSpacing: -0.5 }}>
+                      {displayName}
+                    </div>
+                    <div style={{ display: "flex", color: "rgba(255,255,255,0.82)", fontSize: 22, marginTop: 6 }}>
+                      {tagline}
                     </div>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: s.w * 0.34, height: 54 }}>
-                  {[0, 1].map((k) => (
-                    <div key={k} style={{ display: "flex", width: 13, height: 54, background: PAL.steelDark }} />
-                  ))}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                    marginTop: 22,
+                    color: "#fff",
+                  }}
+                >
+                  <div style={{ display: "flex", fontSize: 58, fontWeight: 900 }}>#1</div>
+                  <div style={{ display: "flex", fontSize: 50, fontWeight: 800 }}>{fmtUSD(leader.amount)}</div>
                 </div>
               </div>
-            );
-          })}
+              <div style={{ display: "flex", gap: panelW * 0.34, height: 60 }}>
+                {[0, 1].map((k) => (
+                  <div key={k} style={{ display: "flex", width: 16, height: 60, background: PAL.steelDark }} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", color: "#3d5240", fontSize: 34, fontWeight: 700 }}>
+              Be the first billboard on the highway
+            </div>
+          )}
         </div>
 
         <div
