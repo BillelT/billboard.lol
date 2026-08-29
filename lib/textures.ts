@@ -129,9 +129,6 @@ export function makeFaceTexture(opts: {
   bg.addColorStop(1, shade(opts.color, -0.05));
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, LW, LH);
-  ctx.strokeStyle = "rgba(255,255,255,0.35)";
-  ctx.lineWidth = 8;
-  ctx.strokeRect(18, 18, LW - 36, LH - 36);
 
   // favicon tile — the real icon of the domain, with the monogram as fallback.
   const tile = 170;
