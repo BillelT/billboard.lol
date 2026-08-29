@@ -123,26 +123,12 @@ export function makeFaceTexture(opts: {
   const family = uiFont();
   const font = (w: number, s: number) => `${w} ${s}px ${family}`;
 
-  // background: subtle vertical ramp of the brand color + faint tile grid
+  // background: subtle vertical ramp of the brand color
   const bg = ctx.createLinearGradient(0, 0, 0, LH);
   bg.addColorStop(0, shade(opts.color, 0.06));
   bg.addColorStop(1, shade(opts.color, -0.05));
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, LW, LH);
-  ctx.strokeStyle = "rgba(255,255,255,0.07)";
-  ctx.lineWidth = 3;
-  for (let x = 128; x < LW; x += 128) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, LH);
-    ctx.stroke();
-  }
-  for (let y = 136; y < LH; y += 136) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(LW, y);
-    ctx.stroke();
-  }
   ctx.strokeStyle = "rgba(255,255,255,0.35)";
   ctx.lineWidth = 8;
   ctx.strokeRect(18, 18, LW - 36, LH - 36);

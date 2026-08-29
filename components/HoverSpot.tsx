@@ -8,11 +8,15 @@ import { BILL_Z } from "@/lib/layout";
 const PEAK = 55;
 const COLOR = "#fff2d0";
 
-// One shared ground spotlight that swings onto whichever billboard is under
-// the pointer, instead of a light per panel — it only ever needs to be in one
-// place at a time, and it lights the pole and frame the way a real billboard's
-// own floodlight would (the face itself is unlit and gets its own tint, see
-// Billboards.tsx).
+// One shared spotlight that swings onto whichever billboard is under the
+// pointer, instead of a light per panel — it only ever needs to be in one
+// place at a time. It sits right at the modelled floodlight housings above
+// the panel (see the "Floodlights" block in lib/geometry.ts) and aims down
+// onto the face, the same look as the night scene's own lamps
+// (Night404Lights' LampSpot), so hovering reads as those fixtures switching
+// on rather than a mystery glow off the ground. It lights the pole and frame
+// the way a real floodlight would (the face itself is unlit and gets its own
+// tint, see Billboards.tsx).
 export default function HoverSpot() {
   const light = useRef<THREE.SpotLight>(null);
   const target = useMemo(() => new THREE.Object3D(), []);
@@ -28,10 +32,18 @@ export default function HoverSpot() {
     l.intensity = level.current * level.current * PEAK;
     if (!t) return;
 
-    l.position.set(t.x, 0.6, BILL_Z + t.panelH * 0.8);
-    l.angle = Math.atan2(t.panelH * 0.75, t.panelH * 0.85);
-    l.distance = t.poleH + t.panelH * 2.5;
-    target.position.set(t.x, t.poleH + t.panelH * 0.5, BILL_Z);
+    // mirrors the floodlight housing placement in makeBillboardGeometry
+    const tk = THREE.MathUtils.clamp(t.panelH * 0.07, 0.2, 1.3);
+    const fw = Math.max(tk * 0.9, t.panelH * 0.045);
+    const u = THREE.MathUtils.clamp(t.panelH * 0.062, 0.2, 1.3);
+    const lampY = t.poleH + t.panelH + fw * 0.8 + u * 0.95;
+    const lampZ = BILL_Z + tk * 0.9 + u * 1.62;
+    const targetY = t.poleH + t.panelH * 0.55;
+
+    l.position.set(t.x, lampY, lampZ);
+    l.angle = Math.atan2(t.panelW * 0.55, lampY - targetY);
+    l.distance = (lampY - targetY) * 3;
+    target.position.set(t.x, targetY, BILL_Z);
   });
 
   return (
