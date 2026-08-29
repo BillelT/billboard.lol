@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
-import { ANCHOR_DOMAINS, SEED } from "@/lib/seed";
+import { ANCHOR_CATEGORIES, ANCHOR_DOMAINS, SEED } from "@/lib/seed";
 import type { Billboard } from "@/lib/types";
 
 interface SiteInfoResponse {
@@ -38,6 +38,7 @@ async function anchorSeed(): Promise<Billboard[]> {
       title: info.title,
       description: info.description,
       iconUrl: info.iconUrl,
+      category: ANCHOR_CATEGORIES[i],
       placeholder: false,
     };
   });
