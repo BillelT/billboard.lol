@@ -444,6 +444,15 @@ body {
   gap: 8px;
   width: 100%;
   position: relative;
+  transition: transform 0.2s ease;
+}
+.claim--dragging {
+  transition: none;
+}
+/* the reveal-on-tap sheet's own dismiss affordance — drag it back down to
+   collapse. Hidden outside the collapsed mobile flow. */
+.claim__handle {
+  display: none;
 }
 .claim > input {
   font: inherit;
@@ -735,7 +744,20 @@ body {
     justify-content: center;
     max-width: 320px;
     font-size: 13px;
-    border-radius: var(--r-sm);
+    /* floating and centered here, not docked to an edge — the flag-shaped
+       accent border only read right when it was flush against the rail */
+    border: var(--edge-soft);
+    border-radius: 999px;
+  }
+  /* narrowest at the top, widest right against the dock it feeds into */
+  .gauge--made {
+    order: 1;
+  }
+  .gauge--live {
+    order: 2;
+  }
+  .gauge--visitors {
+    order: 3;
   }
   .gauge--tallest,
   .gauge--planted,
@@ -763,6 +785,30 @@ body {
   .cat {
     width: 100%;
     flex: 1 0 100%;
+  }
+  /* drag handle: an Apple-sheet-style grip above the fields, only present
+     once the form is open — dragging it down past the threshold closes it */
+  .claim--open .claim__handle {
+    display: flex;
+    order: -1;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    flex: 1 0 100%;
+    padding: 2px 0 10px;
+    margin: -6px 0 -4px;
+    cursor: grab;
+    touch-action: none;
+  }
+  .claim__handle::after {
+    content: "";
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--ink-3);
+  }
+  .claim--dragging .claim__handle {
+    cursor: grabbing;
   }
   .cat__panel {
     width: 100%;
