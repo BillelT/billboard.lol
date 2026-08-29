@@ -154,7 +154,7 @@ export function makeFaceTexture(opts: {
     const h = ih * k;
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(tx + pad, ty + pad, box, box, Math.max(0, containerRadius - pad));
+    ctx.roundRect(tx + pad, ty + pad, box, box, Math.max(0, containerRadius - pad + 8));
     ctx.clip();
     ctx.drawImage(icon, tx + (tile - w) / 2, ty + (tile - h) / 2, w, h);
     ctx.restore();
