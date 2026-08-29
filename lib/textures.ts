@@ -189,7 +189,7 @@ export function makeFaceTexture(opts: {
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#ffffff";
-  ctx.font = font(700, 60);
+  ctx.font = font(600, 60);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowOffsetY = 3;
   ctx.fillText(`#${opts.rank}`, LW - 64, 42 + 19);
@@ -226,7 +226,7 @@ export function makeFaceTexture(opts: {
   ctx.textAlign = "right";
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#ffffff";
-  ctx.font = font(700, 48);
+  ctx.font = font(600, 44);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowOffsetY = 3;
   ctx.fillText(fmtUSD(opts.amount), LW - 64, LH - 46);
