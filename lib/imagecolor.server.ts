@@ -204,10 +204,9 @@ export function dominantColor(bytes: Uint8Array): string | null {
   const sumL = new Float64Array(BUCKETS);
   const sumX = new Float64Array(BUCKETS);
   const sumY = new Float64Array(BUCKETS);
-  let grayL = 0;
-  let grayN = 0;
+  let inkL = 0;
+  let inkN = 0;
   let sampledN = 0;
-  let transparentN = 0;
 
   // stride-sample so a 512px apple-touch-icon costs the same as a 32px favicon
   const step = Math.max(1, Math.floor(Math.sqrt((bmp.width * bmp.height) / 16384)));
@@ -216,16 +215,15 @@ export function dominantColor(bytes: Uint8Array): string | null {
       const o = (y * bmp.width + x) * 4;
       const a = bmp.data[o + 3];
       sampledN++;
-      if (a < 128) {
-        transparentN++;
-        continue;
-      }
+      if (a < 128) continue; // transparent: not part of the mark
       const [h, s, l] = rgbToHsl(bmp.data[o], bmp.data[o + 1], bmp.data[o + 2]);
       if (s < 0.16 || l > 0.94 || l < 0.06) {
-        // near-white is background; everything else feeds the monochrome fallback
-        if (l <= 0.9) {
-          grayL += l;
-          grayN++;
+        // near-white/near-black/desaturated: not a brand hue. Only the dark
+        // half of that is the actual ink of a monochrome mark — a light,
+        // opaque background (common for favicons) lands here too but isn't ink
+        if (l < 0.5) {
+          inkL += l;
+          inkN++;
         }
         continue;
       }
@@ -250,15 +248,16 @@ export function dominantColor(bytes: Uint8Array): string | null {
   }
 
   if (best < 0) {
-    if (!grayN) return null;
-    // a favicon that's mostly transparent is a mark meant to float on
-    // whatever's behind it (usually a white site) — a dark slate would be
-    // reading a colour into an icon that never had one, so go light instead
-    if (sampledN > 0 && transparentN / sampledN > 0.5) {
+    if (!inkN) return null;
+    // the ink is a minority of the canvas: background (transparent, or an
+    // opaque light fill — both common for favicons) dominates, so this is a
+    // mark meant to float on something light rather than a genuinely dark icon
+    if (inkN / sampledN < 0.5) {
       return hslToHex(0.61, 0.08, 0.94);
     }
-    // opaque black/white logo: a dark neutral slate, the same hue family as the UI
-    const l = grayL / grayN;
+    // ink fills most of the canvas: a genuinely dark/neutral icon — the same
+    // dark slate as before, the same hue family as the UI
+    const l = inkL / inkN;
     return hslToHex(0.61, 0.14, Math.max(0.24, Math.min(0.34, l * 0.5 + 0.16)));
   }
 
