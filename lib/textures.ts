@@ -117,8 +117,8 @@ export function makeFaceTexture(opts: {
   // one shared margin on every edge — same left/right, same top/bottom —
   // so every element lines up against the same content box instead of each
   // picking its own inset
-  const MARGIN_X = 64;
-  const MARGIN_Y = 28;
+  const MARGIN_X = 48;
+  const MARGIN_Y = 40;
   ctx.scale(W / LW, H / LH);
   const family = uiFont();
   const font = (w: number, s: number) => `${w} ${s}px ${family}`;
