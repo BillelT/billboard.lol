@@ -77,10 +77,36 @@ export default function Overlay() {
   const [sound, setSound] = useState(false);
   const [volume, setVolume] = useState(1);
   const [claimOpen, setClaimOpen] = useState(false);
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const dragStartYRef = useRef(0);
   const dockRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLDivElement>(null);
   const catMeasureRef = useRef<HTMLDivElement>(null);
   const domainRef = useRef<HTMLInputElement>(null);
+
+  // the reveal-on-tap form, closed like an iOS sheet: drag its handle down
+  // past a threshold to collapse it back to just the CTA
+  const onHandlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDraggingRef.current = true;
+    dragStartYRef.current = e.clientY;
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onHandlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    setDragY(Math.max(0, e.clientY - dragStartYRef.current));
+  };
+  const endHandleDrag = () => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    setDragging(false);
+    setDragY((y) => {
+      if (y > 60) setClaimOpen(false);
+      return 0;
+    });
+  };
 
   // publish the dock height so the gauge rail and the hint always clear it
   useEffect(() => {
@@ -292,8 +318,8 @@ export default function Overlay() {
         </div>
         <div className="gauge gauge--tallest">Tallest is {top ? fmtFeet(top.totalH) : "—"}</div>
         <div className="gauge gauge--planted">{realCount} billboards planted</div>
-        <div className="gauge">{fmtUSD(totalBurned)} made</div>
-        <div className="gauge">
+        <div className="gauge gauge--made">{fmtUSD(totalBurned)} made</div>
+        <div className="gauge gauge--visitors">
           {visits !== null ? visits.toLocaleString("en-US") : "—"} visitors since launch
         </div>
         <div className="gauge gauge--sound">
@@ -371,7 +397,21 @@ export default function Overlay() {
             </span>
           </h1>
 
-          <form className={`claim ${claimOpen ? "claim--open" : ""}`} onSubmit={submit}>
+          <form
+            className={`claim ${claimOpen ? "claim--open" : ""} ${dragging ? "claim--dragging" : ""}`}
+            onSubmit={submit}
+            style={dragY ? { transform: `translateY(${dragY}px)` } : undefined}
+          >
+            {claimOpen && (
+              <div
+                className="claim__handle"
+                onPointerDown={onHandlePointerDown}
+                onPointerMove={onHandlePointerMove}
+                onPointerUp={endHandleDrag}
+                onPointerCancel={endHandleDrag}
+                aria-hidden="true"
+              />
+            )}
             <input
               ref={domainRef}
               className="claim__domain"
