@@ -129,10 +129,11 @@ export function makeFaceTexture(opts: {
   ctx.lineWidth = 8;
   ctx.strokeRect(18, 18, LW - 36, LH - 36);
 
-  // favicon tile — the real icon of the domain, with the monogram as fallback
-  const tile = 176;
-  const tx = 72;
-  const ty = LH / 2 - tile / 2;
+  // favicon tile — the real icon of the domain, with the monogram as fallback.
+  // Bigger now that rank/price/category shrank out of its way.
+  const tile = 200;
+  const tx = 64;
+  const ty = 150;
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.roundRect(tx, ty, tile, tile, 40);
@@ -141,7 +142,7 @@ export function makeFaceTexture(opts: {
   ctx.textBaseline = "middle";
   const icon = opts.icon;
   if (icon && icon.complete) {
-    const pad = 26;
+    const pad = 28;
     const box = tile - pad * 2;
     const iw = icon.naturalWidth || box;
     const ih = icon.naturalHeight || box;
@@ -156,18 +157,18 @@ export function makeFaceTexture(opts: {
     ctx.restore();
   } else {
     ctx.fillStyle = opts.color;
-    ctx.font = font(700, 110);
+    ctx.font = font(700, 125);
     ctx.fillText(opts.name.charAt(0).toUpperCase(), tx + tile / 2, ty + tile / 2 + 8);
   }
 
-  // category pill — the buyer's chosen category, top-left, clear of the rank
+  // category pill — top-left, kept small: it's a label, not a headline
   if (opts.category) {
     const label = opts.category.toUpperCase();
-    ctx.font = font(700, 30);
-    const pillMaxW = LW - 128 - 420;
+    ctx.font = font(700, 24);
+    const pillMaxW = LW - 128 - 160;
     const clipped = ellipsize(ctx, label, pillMaxW);
-    const padX = 22;
-    const pillH = 50;
+    const padX = 16;
+    const pillH = 38;
     const pillW = ctx.measureText(clipped).width + padX * 2;
     const px = 64;
     const py = 42;
@@ -184,9 +185,20 @@ export function makeFaceTexture(opts: {
     ctx.fillText(clipped, px + padX, py + pillH / 2 + 1);
   }
 
-  // domain name, auto-fit then hard-truncated so it never runs into the rank
-  const nameX = tx + tile + 48;
-  const nameMaxW = LW - nameX - 300;
+  // rank — top-right, same small scale as the category pill: the panel's own
+  // size is what carries the hierarchy, this is just a label
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = font(700, 44);
+  ctx.shadowColor = "rgba(0,0,0,0.18)";
+  ctx.shadowOffsetY = 3;
+  ctx.fillText(`#${opts.rank}`, LW - 64, 42 + 19);
+  ctx.shadowColor = "transparent";
+
+  // domain name — right of the favicon, same row
+  const nameX = tx + tile + 44;
+  const nameMaxW = LW - nameX - 48;
   let size = 96;
   ctx.font = font(700, size);
   while (size > 34 && ctx.measureText(opts.name).width > nameMaxW) {
@@ -200,34 +212,29 @@ export function makeFaceTexture(opts: {
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 4;
-  ctx.fillText(displayName, nameX, LH / 2 - 26);
+  ctx.fillText(displayName, nameX, ty + tile * 0.32);
   ctx.shadowColor = "transparent";
 
-  // the site's own SEO line, wrapped over up to 3 lines instead of clipped to
-  // one — still bounded by nameMaxW so it never runs into the rank column
+  // the site's own SEO line, under the name — free to use the width the
+  // shrunk rank/price/category gave up, wrapped over up to 3 lines
   const tagline = opts.description ?? opts.title ?? "your ad, but bigger";
   ctx.font = font(400, 34);
   ctx.fillStyle = "rgba(255,255,255,0.78)";
   const taglineLineH = 42;
-  const taglineY = LH / 2 + 46;
-
-  // 250 laisse moins de marge à droite que les 380 du titre. 
-  // Vous pouvez réduire ce chiffre (ex: 200, 150) si vous voulez encore plus de largeur.
-  const descriptionMaxW = LW - nameX - 182;
-  
+  const taglineY = ty + tile * 0.68;
+  const descriptionMaxW = LW - nameX - 48;
   for (const [i, line] of wrapLines(ctx, tagline, descriptionMaxW, 3).entries()) {
     ctx.fillText(line, nameX, taglineY + i * taglineLineH);
   }
 
-  // rank + amount on the right
+  // price — moved down to the bottom, discreet but still legible, still white
   ctx.textAlign = "right";
+  ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#ffffff";
-  ctx.font = font(700, 120);
+  ctx.font = font(700, 58);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
-  ctx.shadowOffsetY = 5;
-  ctx.fillText(`#${opts.rank}`, LW - 64, LH / 2 - 40);
-  ctx.font = font(700, 84);
-  ctx.fillText(fmtUSD(opts.amount), LW - 64, LH / 2 + 78);
+  ctx.shadowOffsetY = 3;
+  ctx.fillText(fmtUSD(opts.amount), LW - 64, LH - 46);
   ctx.shadowColor = "transparent";
 
   const tex = new THREE.CanvasTexture(canvas);
