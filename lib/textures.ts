@@ -72,6 +72,15 @@ function shade(hex: string, f: number): string {
   return `#${c.getHexString()}`;
 }
 
+// compact freshness label for the bottom stat row — "12h ago", not "12 hours ago"
+function timeAgo(iso: string): string {
+  const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
+}
+
 // The camera descends to match each billboard, so every panel fills a similar
 // slice of the screen when you reach it: they all need the same resolution.
 // Memory is kept flat by how few are painted at once (see TEXTURE_RANGE), not by
@@ -91,6 +100,10 @@ export function makeFaceTexture(opts: {
   description?: string | null;
   /** the category the buyer picked at checkout */
   category?: string | null;
+  /** total taps that opened this company's url, across every rank it has held */
+  clickCount?: number | null;
+  /** ISO timestamp of the most recent payment that landed for this company */
+  claimedAt?: string | null;
 }): THREE.CanvasTexture {
   const W = opts.res;
   const H = Math.round(W * 0.53);
@@ -164,30 +177,6 @@ export function makeFaceTexture(opts: {
     ctx.fillText(opts.name.charAt(0).toUpperCase(), tx + tile / 2, ty + tile / 2 + 8);
   }
 
-  // category pill — top-left, kept small: it's a label, not a headline
-  if (opts.category) {
-    const label = opts.category.toUpperCase();
-    ctx.font = font(700, 24);
-    const pillMaxW = LW - 128 - 160;
-    const clipped = ellipsize(ctx, label, pillMaxW);
-    const padX = 16;
-    const pillH = 38;
-    const pillW = ctx.measureText(clipped).width + padX * 2;
-    const px = 64;
-    const py = 42;
-    ctx.fillStyle = "rgba(255,255,255,0.18)";
-    ctx.beginPath();
-    ctx.roundRect(px, py, pillW, pillH, pillH / 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.4)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillText(clipped, px + padX, py + pillH / 2 + 1);
-  }
-
   // rank — top-right, same small scale as the category pill: the panel's own
   // size is what carries the hierarchy, this is just a label
   ctx.textAlign = "right";
@@ -226,14 +215,54 @@ export function makeFaceTexture(opts: {
     ctx.fillText(line, tx, taglineY + i * taglineLineH);
   }
 
-  // price — moved down to the bottom, discreet but still legible, still white
+  // bottom row: stats bottom-left (discreet), category pill bottom-center,
+  // price bottom-right — one shared baseline so the three read as one row
+  const rowY = LH - 64;
+
+  // freshness + total clicks — small and muted, just a footnote under the panel
+  const statParts: string[] = [];
+  if (opts.claimedAt) statParts.push(timeAgo(opts.claimedAt));
+  if (opts.clickCount != null) statParts.push(`${opts.clickCount.toLocaleString("en-US")} clicks`);
+  if (statParts.length) {
+    ctx.font = font(400, 28);
+    ctx.fillStyle = "rgba(255,255,255,0.68)";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(statParts.join("  ·  "), tx, rowY);
+  }
+
+  // category pill — bottom-center, kept small: it's a label, not a headline
+  if (opts.category) {
+    const label = opts.category.toUpperCase();
+    ctx.font = font(700, 24);
+    const pillMaxW = LW * 0.4;
+    const clipped = ellipsize(ctx, label, pillMaxW);
+    const padX = 16;
+    const pillH = 38;
+    const pillW = ctx.measureText(clipped).width + padX * 2;
+    const px = (LW - pillW) / 2;
+    const py = rowY - pillH / 2;
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.beginPath();
+    ctx.roundRect(px, py, pillW, pillH, pillH / 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.4)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(clipped, px + padX, py + pillH / 2 + 1);
+  }
+
+  // price — discreet but still legible, still white
   ctx.textAlign = "right";
-  ctx.textBaseline = "alphabetic";
+  ctx.textBaseline = "middle";
   ctx.fillStyle = "#ffffff";
   ctx.font = font(600, 44);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowOffsetY = 3;
-  ctx.fillText(fmtUSD(opts.amount), LW - 64, LH - 46);
+  ctx.fillText(fmtUSD(opts.amount), LW - 64, rowY);
   ctx.shadowColor = "transparent";
 
   const tex = new THREE.CanvasTexture(canvas);

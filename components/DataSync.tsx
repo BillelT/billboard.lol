@@ -77,7 +77,9 @@ export default function DataSync() {
       const fetchRanking = async () => {
         const { data, error } = await supabase
           .from("current_ranking")
-          .select("id,name,url,color,icon_url,title,description,category,total_amount")
+          .select(
+            "id,name,url,color,icon_url,title,description,category,click_count,claimed_at,total_amount",
+          )
           .order("total_amount", { ascending: false });
         if (!error && data && data.length > 0) {
           setBillboards(
@@ -92,6 +94,8 @@ export default function DataSync() {
                 description: r.description,
                 iconUrl: r.icon_url,
                 category: r.category,
+                clickCount: r.click_count == null ? null : Number(r.click_count),
+                claimedAt: r.claimed_at,
               }),
             ),
           );
