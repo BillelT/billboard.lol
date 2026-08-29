@@ -135,14 +135,25 @@ export default async function Image() {
   const taglineMaxChars = Math.max(10, Math.floor(nameMaxW / (22 * 0.52)));
   const tagline = leader ? truncate(leader.description ?? leader.title ?? "your ad, but bigger", taglineMaxChars) : "";
 
+  // clustered left like the reference, just a lone one on the right for balance
   const pines = [
-    { left: 30, bottom: 96, scale: 1.3 },
-    { left: 92, bottom: 78, scale: 1.0 },
-    { left: 154, bottom: 90, scale: 0.85 },
-    { left: 1032, bottom: 88, scale: 1.05 },
-    { left: 1096, bottom: 100, scale: 1.25 },
-    { left: 1150, bottom: 76, scale: 0.8 },
+    { left: 12, bottom: 90, scale: 1.45 },
+    { left: 78, bottom: 68, scale: 1.05 },
+    { left: 140, bottom: 88, scale: 0.9 },
+    { left: 195, bottom: 64, scale: 0.78 },
+    { left: 245, bottom: 82, scale: 0.68 },
+    { left: 1145, bottom: 78, scale: 0.85 },
   ];
+
+  // the billboard as a real 3/4-angle box (front + a skewed right side + a
+  // skewed top), not a flat frontal card — verified skewX/skewY render
+  // correctly in satori (an isolated test box matched the intended look)
+  // before building the real thing on top of it.
+  const depth = 26; // side face width
+  const topDepth = 20; // top face height
+  const boxLeft = 20;
+  const boxTop = 74;
+  const sideColor = shade(PAL.steelDark, -0.08); // neutral gray, not frame's cream (which skews tan when darkened)
 
   return new ImageResponse(
     (
@@ -196,6 +207,35 @@ export default async function Image() {
             background: "#ffffff",
             borderRadius: 999,
             opacity: 0.85,
+          }}
+        />
+
+        {/* soft rolling hills sitting right on the horizon, behind everything
+            else — the depth cue the flat grass alone doesn't give */}
+        <div
+          style={{
+            position: "absolute",
+            display: "flex",
+            left: -80,
+            bottom: 140,
+            width: 520,
+            height: 90,
+            borderRadius: "50%",
+            background: PAL.hemiGround,
+            opacity: 0.55,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            display: "flex",
+            left: 760,
+            bottom: 148,
+            width: 620,
+            height: 100,
+            borderRadius: "50%",
+            background: PAL.hemiGround,
+            opacity: 0.5,
           }}
         />
 
@@ -310,63 +350,136 @@ export default async function Image() {
           </div>
         </div>
 
-        {/* one dominant, centered billboard — #1's live name, tagline, rank
-            and price, the same content the real billboard face shows */}
+        {/* one dominant billboard, built as a real 3/4-angle box — #1's live
+            name, tagline, rank and price, the same content the real
+            billboard face shows */}
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center" }}>
           {leader ? (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                transform: "rotate(-1.6deg)",
-              }}
-            >
-              {/* floodlights, lit — the same warm glow they get on hover in
-                  the real scene, cast down onto the cap below them. Plain
-                  flex + negative margin to overlap, same trick the cap/panel
-                  below already use — satori doesn't reliably center an
-                  absolutely-positioned child via left:50%+transform. */}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    width: panelW * 0.9,
-                    height: 46,
-                    borderRadius: "50%",
-                    background: "radial-gradient(ellipse, rgba(255,246,221,0.6) 0%, rgba(255,246,221,0) 70%)",
-                  }}
-                />
-                <div style={{ display: "flex", gap: panelW * 0.26, marginTop: -28, marginBottom: 6 }}>
-                  {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      style={{ display: "flex", width: 14, height: 20, borderRadius: 3, background: PAL.lamp }}
-                    />
-                  ))}
-                </div>
-              </div>
+            <div style={{ position: "relative", display: "flex", width: 546, height: 470 }}>
+              {/* legs, then the cross-brace tying them together */}
               <div
                 style={{
+                  position: "absolute",
                   display: "flex",
-                  width: panelW * 1.05,
-                  height: 9,
-                  background: `linear-gradient(180deg, ${PAL.steel} 0%, ${PAL.steelDark} 100%)`,
-                  borderRadius: 3,
-                  marginBottom: -3,
+                  left: boxLeft + panelW * 0.24,
+                  top: boxTop + panelH,
+                  width: 16,
+                  height: 66,
+                  background: PAL.steelDark,
                 }}
               />
               <div
                 style={{
-                  position: "relative",
+                  position: "absolute",
+                  display: "flex",
+                  left: boxLeft + panelW * 0.24 + 16,
+                  top: boxTop + panelH + 26,
+                  width: panelW * 0.52 - 16,
+                  height: 9,
+                  background: PAL.steelDark,
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  display: "flex",
+                  left: boxLeft + panelW * 0.76 - 16,
+                  top: boxTop + panelH,
+                  width: 16,
+                  height: 66,
+                  background: PAL.steelDark,
+                }}
+              />
+
+              {/* ground-contact shadow, angled with the legs */}
+              <div
+                style={{
+                  position: "absolute",
+                  display: "flex",
+                  left: boxLeft + panelW * 0.14,
+                  top: boxTop + panelH + 44,
+                  width: panelW * 0.72,
+                  height: 34,
+                  borderRadius: "50%",
+                  background: "radial-gradient(ellipse, rgba(15,30,10,0.5) 0%, rgba(15,30,10,0) 72%)",
+                }}
+              />
+
+              {/* top face: the frame's roof, receding away */}
+              <div
+                style={{
+                  position: "absolute",
+                  display: "flex",
+                  left: boxLeft,
+                  top: boxTop - topDepth,
+                  width: panelW,
+                  height: topDepth,
+                  background: `linear-gradient(90deg, ${PAL.steelDark} 0%, ${PAL.steel} 55%)`,
+                  transform: "skewX(-34deg)",
+                  transformOrigin: "bottom left",
+                }}
+              />
+              {/* side face: the frame's return edge, in shadow */}
+              <div
+                style={{
+                  position: "absolute",
+                  display: "flex",
+                  left: boxLeft + panelW,
+                  top: boxTop,
+                  width: depth,
+                  height: panelH,
+                  background: sideColor,
+                  transform: "skewY(-22deg)",
+                  transformOrigin: "top left",
+                }}
+              />
+
+              {/* floodlights, lit — the same warm glow they get on hover in
+                  the real scene, sitting on the roof above the front face */}
+              <div
+                style={{
+                  position: "absolute",
+                  display: "flex",
+                  left: boxLeft + panelW * 0.06,
+                  top: boxTop - topDepth - 40,
+                  width: panelW * 0.88,
+                  height: 46,
+                  borderRadius: "50%",
+                  background: "radial-gradient(ellipse, rgba(255,246,221,0.6) 0%, rgba(255,246,221,0) 70%)",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  display: "flex",
+                  left: boxLeft + panelW * 0.1,
+                  top: boxTop - topDepth - 26,
+                  gap: panelW * 0.32,
+                }}
+              >
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    style={{ display: "flex", width: 14, height: 20, borderRadius: 3, background: PAL.lamp }}
+                  />
+                ))}
+              </div>
+
+              {/* front face — the one thing that stays a plain, legible
+                  rectangle; only the surfaces around it fake the depth */}
+              <div
+                style={{
+                  position: "absolute",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
+                  left: boxLeft,
+                  top: boxTop,
                   width: panelW,
                   height: panelH,
+                  boxSizing: "border-box",
                   background: `linear-gradient(180deg, ${shade(leader.color, 0.07)} 0%, ${shade(leader.color, -0.06)} 100%)`,
                   border: `8px solid ${PAL.frame}`,
-                  borderRadius: 14,
                   boxShadow: "0 24px 50px rgba(31,39,51,0.28)",
                   padding: "0 30px",
                   overflow: "hidden",
@@ -420,22 +533,6 @@ export default async function Image() {
                   <div style={{ display: "flex", fontSize: 58, fontWeight: 900 }}>#1</div>
                   <div style={{ display: "flex", fontSize: 50, fontWeight: 800 }}>{fmtUSD(leader.amount)}</div>
                 </div>
-              </div>
-              <div style={{ display: "flex", gap: panelW * 0.34, height: 60 }}>
-                {[0, 1].map((k) => (
-                  <div key={k} style={{ display: "flex", width: 16, height: 60, background: PAL.steelDark }} />
-                ))}
-              </div>
-              <div style={{ display: "flex", marginTop: -22 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    width: panelW * 0.92,
-                    height: 40,
-                    borderRadius: "50%",
-                    background: "radial-gradient(ellipse, rgba(15,30,10,0.5) 0%, rgba(15,30,10,0) 72%)",
-                  }}
-                />
               </div>
             </div>
           ) : (
