@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { fmtUSD } from "./layout";
+import { timeAgo } from "./timeAgo";
 
 // Topfloor-style ad face: brand color panel (picked from the site's favicon), the
 // real favicon in a white tile + the domain and the site's own SEO line on the
@@ -70,15 +71,6 @@ function shade(hex: string, f: number): string {
   const c = new THREE.Color(hex);
   c.offsetHSL(0, 0, f);
   return `#${c.getHexString()}`;
-}
-
-// compact freshness label for the bottom stat row — "12h ago", not "12 hours ago"
-function timeAgo(iso: string): string {
-  const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.round(hours / 24)}d ago`;
 }
 
 // The camera descends to match each billboard, so every panel fills a similar
