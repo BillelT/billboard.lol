@@ -130,18 +130,18 @@ export function makeFaceTexture(opts: {
   ctx.strokeRect(18, 18, LW - 36, LH - 36);
 
   // favicon tile — the real icon of the domain, with the monogram as fallback.
-  const tile = 200;
+  const tile = 170;
   const tx = 64;
-  const ty = 150;
+  const ty = 112;
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
-  ctx.roundRect(tx, ty, tile, tile, 40);
+  ctx.roundRect(tx, ty, tile, tile, 34);
   ctx.fill();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   const icon = opts.icon;
   if (icon && icon.complete) {
-    const pad = 28;
+    const pad = 24;
     const box = tile - pad * 2;
     const iw = icon.naturalWidth || box;
     const ih = icon.naturalHeight || box;
@@ -150,13 +150,13 @@ export function makeFaceTexture(opts: {
     const h = ih * k;
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(tx, ty, tile, tile, 40);
+    ctx.roundRect(tx, ty, tile, tile, 34);
     ctx.clip();
     ctx.drawImage(icon, tx + (tile - w) / 2, ty + (tile - h) / 2, w, h);
     ctx.restore();
   } else {
     ctx.fillStyle = opts.color;
-    ctx.font = font(700, 125);
+    ctx.font = font(700, 106);
     ctx.fillText(opts.name.charAt(0).toUpperCase(), tx + tile / 2, ty + tile / 2 + 8);
   }
 
@@ -207,7 +207,7 @@ export function makeFaceTexture(opts: {
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 4;
-  ctx.fillText(displayName, nameX, ty + tile * 0.32);
+  ctx.fillText(displayName, nameX, ty + tile / 2);
   ctx.shadowColor = "transparent";
 
   // the site's own SEO line — below the whole favicon+name row, spanning
