@@ -77,34 +77,51 @@ export default function Overlay() {
   const [sound, setSound] = useState(false);
   const [volume, setVolume] = useState(1);
   const [claimOpen, setClaimOpen] = useState(false);
-  const [dragY, setDragY] = useState(0);
+  // explicit pixel height while dragging/settling — null means "let it be
+  // auto height", so the card itself shrinks instead of content sliding out
+  // past its (unmoving) background
+  const [heightOverride, setHeightOverride] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const isDraggingRef = useRef(false);
   const dragStartYRef = useRef(0);
+  const formHeightRef = useRef(0);
   const dockRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLDivElement>(null);
   const catMeasureRef = useRef<HTMLDivElement>(null);
   const domainRef = useRef<HTMLInputElement>(null);
+  const claimRef = useRef<HTMLFormElement>(null);
 
   // the reveal-on-tap form, closed like an iOS sheet: drag its handle down
-  // past a threshold to collapse it back to just the CTA
+  // past a threshold to collapse it back to just the CTA. Shrinking the
+  // form's own height (not translating it) keeps the paper background
+  // shrinking along with it instead of the fields sliding out past it.
   const onHandlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     isDraggingRef.current = true;
     dragStartYRef.current = e.clientY;
+    formHeightRef.current = claimRef.current?.getBoundingClientRect().height ?? 0;
     setDragging(true);
+    setHeightOverride(formHeightRef.current);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onHandlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
-    setDragY(Math.max(0, e.clientY - dragStartYRef.current));
+    const dy = Math.max(0, e.clientY - dragStartYRef.current);
+    setHeightOverride(Math.max(0, formHeightRef.current - dy));
   };
   const endHandleDrag = () => {
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
     setDragging(false);
-    setDragY((y) => {
-      if (y > 60) setClaimOpen(false);
-      return 0;
+    setHeightOverride((h) => {
+      const current = h ?? formHeightRef.current;
+      const closing = formHeightRef.current > 0 && current < formHeightRef.current * 0.6;
+      // animate the rest of the way (down to closed, or back open), then
+      // hand height back to auto once the transition has settled
+      window.setTimeout(() => {
+        if (closing) setClaimOpen(false);
+        setHeightOverride(null);
+      }, 200);
+      return closing ? 0 : formHeightRef.current;
     });
   };
 
@@ -398,9 +415,12 @@ export default function Overlay() {
           </h1>
 
           <form
+            ref={claimRef}
             className={`claim ${claimOpen ? "claim--open" : ""} ${dragging ? "claim--dragging" : ""}`}
             onSubmit={submit}
-            style={dragY ? { transform: `translateY(${dragY}px)` } : undefined}
+            style={
+              heightOverride !== null ? { height: heightOverride, overflow: "hidden" } : undefined
+            }
           >
             {claimOpen && (
               <div

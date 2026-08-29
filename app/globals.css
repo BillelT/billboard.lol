@@ -444,7 +444,7 @@ body {
   gap: 8px;
   width: 100%;
   position: relative;
-  transition: transform 0.2s ease;
+  transition: height 0.2s ease;
 }
 .claim--dragging {
   transition: none;
@@ -775,6 +775,7 @@ body {
      and category picker instead of firing the checkout right away. */
   .claim {
     flex-wrap: wrap;
+    align-content: flex-start;
   }
   .claim:not(.claim--open) .claim__domain,
   .claim:not(.claim--open) .cat {
