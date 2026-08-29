@@ -43,7 +43,10 @@ On an existing database, run
 [`supabase/migrations/0001_site_metadata.sql`](./supabase/migrations/0001_site_metadata.sql)
 to add the scraped site columns, and
 [`supabase/migrations/0002_site_visits.sql`](./supabase/migrations/0002_site_visits.sql)
-to add the total-visits counter behind the "visitors since launch" gauge.
+to add the total-visits counter behind the "visitors since launch" gauge, and
+[`supabase/migrations/0003_click_counts.sql`](./supabase/migrations/0003_click_counts.sql)
+to add the per-company click counter and the claimed-at timestamp shown on
+each billboard.
 
 ## What a billboard shows
 

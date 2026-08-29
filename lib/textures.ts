@@ -72,6 +72,15 @@ function shade(hex: string, f: number): string {
   return `#${c.getHexString()}`;
 }
 
+// compact freshness label for the bottom stat row — "12h ago", not "12 hours ago"
+function timeAgo(iso: string): string {
+  const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
+}
+
 // The camera descends to match each billboard, so every panel fills a similar
 // slice of the screen when you reach it: they all need the same resolution.
 // Memory is kept flat by how few are painted at once (see TEXTURE_RANGE), not by
@@ -91,6 +100,10 @@ export function makeFaceTexture(opts: {
   description?: string | null;
   /** the category the buyer picked at checkout */
   category?: string | null;
+  /** total taps that opened this company's url, across every rank it has held */
+  clickCount?: number | null;
+  /** ISO timestamp of the most recent payment that landed for this company */
+  claimedAt?: string | null;
 }): THREE.CanvasTexture {
   const W = opts.res;
   const H = Math.round(W * 0.53);
@@ -101,47 +114,39 @@ export function makeFaceTexture(opts: {
   // draw in a fixed 1024-wide design space whatever the real resolution is
   const LW = 1024;
   const LH = LW * 0.53;
+  // one shared margin on every edge — same left/right, same top/bottom —
+  // so every element lines up against the same content box instead of each
+  // picking its own inset
+  const MARGIN_X = 48;
+  const MARGIN_Y = 40;
   ctx.scale(W / LW, H / LH);
   const family = uiFont();
   const font = (w: number, s: number) => `${w} ${s}px ${family}`;
 
-  // background: subtle vertical ramp of the brand color + faint tile grid
+  // background: subtle vertical ramp of the brand color
   const bg = ctx.createLinearGradient(0, 0, 0, LH);
   bg.addColorStop(0, shade(opts.color, 0.06));
   bg.addColorStop(1, shade(opts.color, -0.05));
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, LW, LH);
-  ctx.strokeStyle = "rgba(255,255,255,0.07)";
-  ctx.lineWidth = 3;
-  for (let x = 128; x < LW; x += 128) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, LH);
-    ctx.stroke();
-  }
-  for (let y = 136; y < LH; y += 136) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(LW, y);
-    ctx.stroke();
-  }
-  ctx.strokeStyle = "rgba(255,255,255,0.35)";
-  ctx.lineWidth = 8;
-  ctx.strokeRect(18, 18, LW - 36, LH - 36);
 
-  // favicon tile — the real icon of the domain, with the monogram as fallback
-  const tile = 176;
-  const tx = 72;
-  const ty = LH / 2 - tile / 2;
+  // favicon tile — the real icon of the domain, with the monogram as fallback.
+  const tile = 170;
+  const tx = MARGIN_X;
+  const ty = MARGIN_Y;
+  // nested-radius rule: the icon clip sits `pad` inside the container, so its
+  // own corner radius is the container's minus that padding, not a separate
+  // number picked by eye
+  const containerRadius = 34;
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
-  ctx.roundRect(tx, ty, tile, tile, 40);
+  ctx.roundRect(tx, ty, tile, tile, containerRadius);
   ctx.fill();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   const icon = opts.icon;
   if (icon && icon.complete) {
-    const pad = 26;
+    const pad = 20;
     const box = tile - pad * 2;
     const iw = icon.naturalWidth || box;
     const ih = icon.naturalHeight || box;
@@ -150,27 +155,85 @@ export function makeFaceTexture(opts: {
     const h = ih * k;
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(tx, ty, tile, tile, 40);
+    ctx.roundRect(tx + pad, ty + pad, box, box, Math.max(0, containerRadius - pad + 8));
     ctx.clip();
     ctx.drawImage(icon, tx + (tile - w) / 2, ty + (tile - h) / 2, w, h);
     ctx.restore();
   } else {
     ctx.fillStyle = opts.color;
-    ctx.font = font(700, 110);
+    ctx.font = font(700, 106);
     ctx.fillText(opts.name.charAt(0).toUpperCase(), tx + tile / 2, ty + tile / 2 + 8);
   }
 
-  // category pill — the buyer's chosen category, top-left, clear of the rank
+  // rank — top-right, same top edge as the favicon: the panel's own size is
+  // what carries the hierarchy, this is just a label
+  ctx.textAlign = "right";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = font(600, 72);
+  ctx.shadowColor = "rgba(0,0,0,0.18)";
+  ctx.shadowOffsetY = 3;
+  ctx.fillText(`#${opts.rank}`, LW - MARGIN_X, MARGIN_Y);
+  ctx.shadowColor = "transparent";
+
+  // domain name — right of the favicon, same row. Fixed size: it never
+  // shrinks to fit, a name too long is truncated with an ellipsis instead.
+  const nameX = tx + tile + 44;
+  // hold back a bit of extra width so a long name's tail clears the rank
+  // badge sitting above it instead of crowding into its digits
+  const nameMaxW = LW - nameX - MARGIN_X - 70;
+  ctx.font = font(700, 80);
+  const displayName = ellipsize(ctx, opts.name, nameMaxW);
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(0,0,0,0.18)";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 4;
+  ctx.fillText(displayName, nameX, ty + tile / 2);
+  ctx.shadowColor = "transparent";
+
+  // the site's own SEO line — below the whole favicon+name row, spanning
+  // the full panel width instead of just the name's column
+  const tagline = opts.description ?? opts.title ?? "your ad, but bigger";
+  ctx.font = font(400, 34);
+  ctx.fillStyle = "rgba(255,255,255,0.78)";
+  const taglineLineH = 42;
+  const taglineY = ty + tile + 40;
+  const descriptionMaxW = LW - tx - MARGIN_X;
+  for (const [i, line] of wrapLines(ctx, tagline, descriptionMaxW, 3).entries()) {
+    ctx.fillText(line, tx, taglineY + i * taglineLineH);
+  }
+
+  // bottom row: stats bottom-left (discreet), category pill bottom-center,
+  // price bottom-right — all three sit on the same bottom margin line
+  const bottomY = LH - MARGIN_Y;
+
+  // freshness + total clicks — small and muted, just a footnote under the panel
+  const statParts: string[] = [];
+  if (opts.claimedAt) statParts.push(timeAgo(opts.claimedAt));
+  if (opts.clickCount != null) statParts.push(`${opts.clickCount.toLocaleString("en-US")} clicks`);
+  if (statParts.length) {
+    ctx.font = font(400, 28);
+    ctx.fillStyle = "rgba(255,255,255,0.80)";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(statParts.join("  ·  "), tx, bottomY);
+  }
+
+  // category pill — bottom-center, kept small: it's a label, not a headline.
+  // Centered on the full panel width, which lines up with the content since
+  // the left/right margins match.
   if (opts.category) {
     const label = opts.category.toUpperCase();
-    ctx.font = font(700, 30);
-    const pillMaxW = LW - 128 - 420;
+    ctx.font = font(700, 24);
+    const pillMaxW = LW * 0.4;
     const clipped = ellipsize(ctx, label, pillMaxW);
-    const padX = 22;
-    const pillH = 50;
+    const padX = 16;
+    const pillH = 38;
     const pillW = ctx.measureText(clipped).width + padX * 2;
-    const px = 64;
-    const py = 42;
+    const px = (LW - pillW) / 2;
+    const py = bottomY - pillH;
     ctx.fillStyle = "rgba(255,255,255,0.18)";
     ctx.beginPath();
     ctx.roundRect(px, py, pillW, pillH, pillH / 2);
@@ -184,50 +247,14 @@ export function makeFaceTexture(opts: {
     ctx.fillText(clipped, px + padX, py + pillH / 2 + 1);
   }
 
-  // domain name, auto-fit then hard-truncated so it never runs into the rank
-  const nameX = tx + tile + 48;
-  const nameMaxW = LW - nameX - 300;
-  let size = 96;
-  ctx.font = font(700, size);
-  while (size > 34 && ctx.measureText(opts.name).width > nameMaxW) {
-    size -= 4;
-    ctx.font = font(700, size);
-  }
-  const displayName = ellipsize(ctx, opts.name, nameMaxW);
-  ctx.fillStyle = "#ffffff";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.shadowColor = "rgba(0,0,0,0.18)";
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 4;
-  ctx.fillText(displayName, nameX, LH / 2 - 26);
-  ctx.shadowColor = "transparent";
-
-  // the site's own SEO line, wrapped over up to 3 lines instead of clipped to
-  // one — still bounded by nameMaxW so it never runs into the rank column
-  const tagline = opts.description ?? opts.title ?? "your ad, but bigger";
-  ctx.font = font(400, 34);
-  ctx.fillStyle = "rgba(255,255,255,0.78)";
-  const taglineLineH = 42;
-  const taglineY = LH / 2 + 46;
-
-  // 250 laisse moins de marge à droite que les 380 du titre. 
-  // Vous pouvez réduire ce chiffre (ex: 200, 150) si vous voulez encore plus de largeur.
-  const descriptionMaxW = LW - nameX - 182;
-  
-  for (const [i, line] of wrapLines(ctx, tagline, descriptionMaxW, 3).entries()) {
-    ctx.fillText(line, nameX, taglineY + i * taglineLineH);
-  }
-
-  // rank + amount on the right
+  // price — discreet but still legible, still white
   ctx.textAlign = "right";
+  ctx.textBaseline = "bottom";
   ctx.fillStyle = "#ffffff";
-  ctx.font = font(700, 120);
+  ctx.font = font(500, 40);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
-  ctx.shadowOffsetY = 5;
-  ctx.fillText(`#${opts.rank}`, LW - 64, LH / 2 - 40);
-  ctx.font = font(700, 84);
-  ctx.fillText(fmtUSD(opts.amount), LW - 64, LH / 2 + 78);
+  ctx.shadowOffsetY = 3;
+  ctx.fillText(fmtUSD(opts.amount), LW - MARGIN_X, bottomY);
   ctx.shadowColor = "transparent";
 
   const tex = new THREE.CanvasTexture(canvas);
