@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
-import { ANCHOR_CATEGORIES, ANCHOR_DOMAINS, SEED } from "@/lib/seed";
+import { ANCHOR_CATEGORIES, ANCHOR_CLICK_COUNTS, ANCHOR_DOMAINS, SEED, anchorClaimedAt } from "@/lib/seed";
 import type { Billboard } from "@/lib/types";
 
 interface SiteInfoResponse {
@@ -39,6 +39,8 @@ async function anchorSeed(): Promise<Billboard[]> {
       description: info.description,
       iconUrl: info.iconUrl,
       category: ANCHOR_CATEGORIES[i],
+      clickCount: ANCHOR_CLICK_COUNTS[i],
+      claimedAt: anchorClaimedAt(i),
       placeholder: false,
     };
   });

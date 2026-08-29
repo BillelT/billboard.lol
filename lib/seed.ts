@@ -37,3 +37,14 @@ export const ANCHOR_DOMAINS = ["billeltighidet.fr", "lacompagniedesinternetsbord
 // — so the anchors need one hardcoded here, same index order as
 // ANCHOR_DOMAINS, purely to have the category label rendered on the highway.
 export const ANCHOR_CATEGORIES = ["Design & Creative", "Other"];
+
+// Same story for clicks and claim freshness — real numbers only exist once a
+// company has actually been clicked or paid for, which the anchors never do.
+// Claimed-at is kept as an offset and turned into an ISO timestamp on demand
+// so the "X ago" label stays sensible instead of freezing to the moment this
+// file was written.
+export const ANCHOR_CLICK_COUNTS = [128, 47];
+const ANCHOR_CLAIMED_MINUTES_AGO = [45, 2880]; // 45m ago, 2d ago
+export function anchorClaimedAt(i: number): string {
+  return new Date(Date.now() - ANCHOR_CLAIMED_MINUTES_AGO[i] * 60_000).toISOString();
+}
