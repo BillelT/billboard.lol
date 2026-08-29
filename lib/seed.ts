@@ -32,3 +32,8 @@ export const SEED: Billboard[] = [1, 1, 0].map((amount, i) => ({
 // domains (favicon, SEO copy, colour — fetched live, see withAnchors below)
 // instead of staying empty, so the road never opens on a totally bare ranking.
 export const ANCHOR_DOMAINS = ["billeltighidet.fr", "lacompagniedesinternetsbordelaise.fr"];
+
+// Categories aren't scraped off the site — a real buyer picks one at checkout
+// — so the anchors need one hardcoded here, same index order as
+// ANCHOR_DOMAINS, purely to have the category label rendered on the highway.
+export const ANCHOR_CATEGORIES = ["Design & Creative", "Other"];
