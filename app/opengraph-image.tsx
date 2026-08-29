@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { getRanking } from "@/lib/ranking.server";
+import { fetchIconBytes } from "@/lib/siteinfo.server";
 import { fmtUSD } from "@/lib/layout";
 import { PAL } from "@/lib/palette";
 
@@ -43,6 +44,43 @@ function shade(hex: string, f: number): string {
   else [r2, g2, b2] = [c, 0, x];
   const to255 = (v: number) => Math.round((v + m) * 255);
   return `#${[to255(r2), to255(g2), to255(b2)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+// compact freshness label for the metadata row — "1d ago", not "1 day ago".
+// Same rule the live billboard face texture uses (lib/textures.ts), duplicated
+// here since this route runs server-side and that module is client-only.
+function timeAgo(iso: string): string {
+  const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
+}
+
+// Word-wraps onto up to maxLines lines, using an average-character-width
+// estimate instead of real text measurement — satori has no canvas to measure
+// against server-side, and the file's own truncate() above takes the same
+// shrink-to-fit-by-character-budget approach for the same reason.
+function wrapByChars(text: string, maxChars: number, maxLines: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (line && test.length > maxChars) {
+      lines.push(line);
+      line = word;
+      if (lines.length === maxLines) break;
+    } else {
+      line = test;
+    }
+  }
+  if (line && lines.length < maxLines) lines.push(line);
+  if (lines.length === maxLines) {
+    const last = lines[maxLines - 1];
+    if (last.length > maxChars) lines[maxLines - 1] = `${last.slice(0, maxChars - 1).trimEnd()}…`;
+  }
+  return lines;
 }
 
 // hex -> "r,g,b" for building rgba() strings in gradients
@@ -119,21 +157,47 @@ export default async function Image() {
   ]);
   const leader = [...ranking].sort((a, b) => b.amount - a.amount)[0];
 
+  // real favicon bytes, inlined as a data URI — an http(s) src would work too,
+  // but a failed fetch mid-render would take the whole image down with it, so
+  // this goes through the same never-throws helper the icon proxy route uses
+  // and falls back to the monogram tile on any miss.
+  const iconBytes = leader ? await fetchIconBytes(leader.name).catch(() => null) : null;
+  const iconDataUri = iconBytes
+    ? `data:${iconBytes.type};base64,${Buffer.from(iconBytes.bytes).toString("base64")}`
+    : null;
+
   // one big billboard now, so it gets to be the tile size that used to belong
   // to a leader sharing the frame with two smaller siblings
-  const panelW = 480;
-  const panelH = 255;
-  const tile = 82;
+  const panelW = 620;
+  const panelH = 340;
+  const tile = 88;
 
   // JS-level truncation and shrink-to-fit sizing — reliable across renderers,
-  // unlike relying on CSS text-overflow inside satori. Same width budget
-  // (panel minus the tile and its gaps) backs both the name and the tagline.
+  // unlike relying on CSS text-overflow inside satori.
   const truncate = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
-  const nameMaxW = panelW - tile - 76;
-  const displayName = leader ? truncate(leader.name, 24) : "";
-  const nameFont = leader ? Math.min(46, Math.floor(nameMaxW / (displayName.length * 0.52))) : 46;
-  const taglineMaxChars = Math.max(10, Math.floor(nameMaxW / (22 * 0.52)));
-  const tagline = leader ? truncate(leader.description ?? leader.title ?? "your ad, but bigger", taglineMaxChars) : "";
+  const contentW = panelW - 72; // panel width minus its own left/right padding
+  const nameMaxW = contentW - tile - 20 - 90; // minus tile+gap, minus room for the rank badge
+  const displayName = leader ? truncate(leader.name, 26) : "";
+  const nameFont = leader ? Math.min(44, Math.floor(nameMaxW / (displayName.length * 0.56))) : 44;
+
+  const descFont = 24;
+  const descMaxChars = Math.max(10, Math.floor(contentW / (descFont * 0.52)));
+  const descriptionLines = leader
+    ? wrapByChars(leader.description ?? leader.title ?? "your ad, but bigger", descMaxChars, 3)
+    : [];
+
+  // pill width isn't measured, so the label is clipped to a character budget
+  // up front (same shrink-to-fit approach as displayName/description above)
+  // rather than left to wrap inside its flex column.
+  const categoryFont = 15;
+  const categoryMaxChars = Math.max(6, Math.floor((contentW * 0.32) / (categoryFont * 0.6)));
+  const categoryLabel = leader?.category ? truncate(leader.category.toUpperCase(), categoryMaxChars) : null;
+
+  const metaLeft = leader
+    ? [leader.claimedAt ? timeAgo(leader.claimedAt) : null, leader.clickCount != null ? `${leader.clickCount.toLocaleString("en-US")} clicks` : null]
+        .filter(Boolean)
+        .join("  ·  ")
+    : "";
 
   const pines = [
     { left: 30, bottom: 96, scale: 1.3 },
@@ -361,14 +425,13 @@ export default async function Image() {
                   position: "relative",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "center",
                   width: panelW,
                   height: panelH,
                   background: `linear-gradient(180deg, ${shade(leader.color, 0.07)} 0%, ${shade(leader.color, -0.06)} 100%)`,
                   border: `8px solid ${PAL.frame}`,
                   borderRadius: 14,
                   boxShadow: "0 24px 50px rgba(31,39,51,0.28)",
-                  padding: "0 30px",
+                  padding: "28px 36px",
                   overflow: "hidden",
                 }}
               >
@@ -382,43 +445,85 @@ export default async function Image() {
                       "radial-gradient(circle at 22% 15%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 62%)",
                   }}
                 />
-                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: tile,
-                      height: tile,
-                      background: "#fff",
-                      borderRadius: tile * 0.28,
-                      color: leader.color,
-                      fontSize: tile * 0.58,
-                      fontWeight: 800,
-                    }}
-                  >
-                    {leader.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <div style={{ display: "flex", color: "#fff", fontSize: nameFont, letterSpacing: -0.5 }}>
+                {/* header row: logo + domain on the left, rank top-right — same
+                    layout the live billboard face texture paints */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: tile,
+                        height: tile,
+                        background: "#fff",
+                        borderRadius: tile * 0.28,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {iconDataUri ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={iconDataUri}
+                          width={tile * 0.66}
+                          height={tile * 0.66}
+                          style={{ objectFit: "contain" }}
+                        />
+                      ) : (
+                        <div style={{ display: "flex", color: leader.color, fontSize: tile * 0.58, fontWeight: 800 }}>
+                          {leader.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", color: "#fff", fontSize: nameFont, fontWeight: 700, letterSpacing: -0.5 }}>
                       {displayName}
                     </div>
-                    <div style={{ display: "flex", color: "rgba(255,255,255,0.82)", fontSize: 22, marginTop: 6 }}>
-                      {tagline}
-                    </div>
                   </div>
+                  {/* leader is always the top of the sorted ranking, i.e. rank 1 */}
+                  <div style={{ display: "flex", color: "#fff", fontSize: 46, fontWeight: 900 }}>#1</div>
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                    marginTop: 22,
-                    color: "#fff",
-                  }}
-                >
-                  <div style={{ display: "flex", fontSize: 58, fontWeight: 900 }}>#1</div>
-                  <div style={{ display: "flex", fontSize: 50, fontWeight: 800 }}>{fmtUSD(leader.amount)}</div>
+
+                {/* the site's own SEO copy, wrapped onto up to three lines */}
+                <div style={{ display: "flex", flexDirection: "column", marginTop: 22 }}>
+                  {descriptionLines.map((line, i) => (
+                    <div
+                      key={i}
+                      style={{ display: "flex", color: "rgba(255,255,255,0.82)", fontSize: descFont, lineHeight: 1.4 }}
+                    >
+                      {line}
+                    </div>
+                  ))}
+                </div>
+
+                {/* bottom row: freshness+clicks / category pill / price, all on
+                    the panel's bottom edge — same three-way split the live
+                    billboard face draws */}
+                <div style={{ display: "flex", alignItems: "center", marginTop: "auto" }}>
+                  <div style={{ display: "flex", flex: 1, color: "rgba(255,255,255,0.8)", fontSize: 20 }}>
+                    {metaLeft}
+                  </div>
+                  <div style={{ display: "flex", flex: 1, justifyContent: "center" }}>
+                    {categoryLabel ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          color: "#fff",
+                          fontSize: categoryFont,
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          background: "rgba(255,255,255,0.18)",
+                          border: "2px solid rgba(255,255,255,0.4)",
+                          borderRadius: 999,
+                          padding: "8px 18px",
+                        }}
+                      >
+                        {categoryLabel}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div style={{ display: "flex", flex: 1, justifyContent: "flex-end", color: "#fff", fontSize: 34, fontWeight: 800 }}>
+                    {fmtUSD(leader.amount)}
+                  </div>
                 </div>
               </div>
               <div style={{ display: "flex", gap: panelW * 0.34, height: 60 }}>
