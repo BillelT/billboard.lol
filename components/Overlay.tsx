@@ -76,9 +76,54 @@ export default function Overlay() {
   const [scrolled, setScrolled] = useState(false);
   const [sound, setSound] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [claimOpen, setClaimOpen] = useState(false);
+  // explicit pixel height while dragging/settling — null means "let it be
+  // auto height", so the card itself shrinks instead of content sliding out
+  // past its (unmoving) background
+  const [heightOverride, setHeightOverride] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const dragStartYRef = useRef(0);
+  const formHeightRef = useRef(0);
   const dockRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLDivElement>(null);
   const catMeasureRef = useRef<HTMLDivElement>(null);
+  const domainRef = useRef<HTMLInputElement>(null);
+  const claimRef = useRef<HTMLFormElement>(null);
+
+  // the reveal-on-tap form, closed like an iOS sheet: drag its handle down
+  // past a threshold to collapse it back to just the CTA. Shrinking the
+  // form's own height (not translating it) keeps the paper background
+  // shrinking along with it instead of the fields sliding out past it.
+  const onHandlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDraggingRef.current = true;
+    dragStartYRef.current = e.clientY;
+    formHeightRef.current = claimRef.current?.getBoundingClientRect().height ?? 0;
+    setDragging(true);
+    setHeightOverride(formHeightRef.current);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onHandlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    const dy = Math.max(0, e.clientY - dragStartYRef.current);
+    setHeightOverride(Math.max(0, formHeightRef.current - dy));
+  };
+  const endHandleDrag = () => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    setDragging(false);
+    setHeightOverride((h) => {
+      const current = h ?? formHeightRef.current;
+      const closing = formHeightRef.current > 0 && current < formHeightRef.current * 0.6;
+      // animate the rest of the way (down to closed, or back open), then
+      // hand height back to auto once the transition has settled
+      window.setTimeout(() => {
+        if (closing) setClaimOpen(false);
+        setHeightOverride(null);
+      }, 200);
+      return closing ? 0 : formHeightRef.current;
+    });
+  };
 
   // publish the dock height so the gauge rail and the hint always clear it
   useEffect(() => {
@@ -217,6 +262,16 @@ export default function Overlay() {
     sceneAudio.setVolume(v);
   };
 
+  // What rank the entered amount would actually take among the real, claimed
+  // billboards (placeholders aren't competitors). Shown once the visitor has
+  // touched the amount — before that the suggested price is already set to
+  // just beat #1, so "biggest billboard" already says it plainly.
+  const realBillboards = useMemo(() => billboards.filter((b) => !b.placeholder), [billboards]);
+  const rank = useMemo(
+    () => realBillboards.filter((b) => b.amount >= amount).length + 1,
+    [realBillboards, amount],
+  );
+
   const filteredCategories = useMemo(
     () => CATEGORIES.filter((c) => c.toLowerCase().includes(catQuery.trim().toLowerCase())),
     [catQuery],
@@ -278,10 +333,10 @@ export default function Overlay() {
           <span className="gauge__dot" aria-hidden="true" />
           {online} on the road
         </div>
-        <div className="gauge">Tallest is {top ? fmtFeet(top.totalH) : "—"}</div>
-        <div className="gauge">{realCount} billboards planted</div>
-        <div className="gauge">{fmtUSD(totalBurned)} made</div>
-        <div className="gauge">
+        <div className="gauge gauge--tallest">Tallest is {top ? fmtFeet(top.totalH) : "—"}</div>
+        <div className="gauge gauge--planted">{realCount} billboards planted</div>
+        <div className="gauge gauge--made">{fmtUSD(totalBurned)} made</div>
+        <div className="gauge gauge--visitors">
           {visits !== null ? visits.toLocaleString("en-US") : "—"} visitors since launch
         </div>
         <div className="gauge gauge--sound">
@@ -330,7 +385,7 @@ export default function Overlay() {
       <div className="dock">
         <div className="dock__inner" ref={dockRef}>
           <h1 className="dock__title">
-            Get the biggest billboard for
+            {rank === 1 ? "Get the biggest billboard for" : `Get the #${rank} billboard for`}
             <span className="meter">
               <button className="meter__step" onClick={() => step(-1)} aria-label="lower the amount by 1">
                 −
@@ -359,8 +414,26 @@ export default function Overlay() {
             </span>
           </h1>
 
-          <form className="claim" onSubmit={submit}>
+          <form
+            ref={claimRef}
+            className={`claim ${claimOpen ? "claim--open" : ""} ${dragging ? "claim--dragging" : ""}`}
+            onSubmit={submit}
+            style={
+              heightOverride !== null ? { height: heightOverride, overflow: "hidden" } : undefined
+            }
+          >
+            {claimOpen && (
+              <div
+                className="claim__handle"
+                onPointerDown={onHandlePointerDown}
+                onPointerMove={onHandlePointerMove}
+                onPointerUp={endHandleDrag}
+                onPointerCancel={endHandleDrag}
+                aria-hidden="true"
+              />
+            )}
             <input
+              ref={domainRef}
               className="claim__domain"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
@@ -421,7 +494,20 @@ export default function Overlay() {
               )}
             </div>
 
-            <button type="submit" className="cta" disabled={busy}>
+            <button
+              type="submit"
+              className="cta"
+              disabled={busy}
+              onClick={(e) => {
+                // collapsed on mobile: the first tap just reveals the form —
+                // the input is display:none there, so offsetParent is null
+                if (!claimOpen && domainRef.current?.offsetParent === null) {
+                  e.preventDefault();
+                  setClaimOpen(true);
+                  requestAnimationFrame(() => domainRef.current?.focus());
+                }
+              }}
+            >
               {busy ? "…" : "Plant my billboard"}
             </button>
           </form>
