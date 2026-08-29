@@ -210,15 +210,16 @@ export function makeFaceTexture(opts: {
   ctx.fillText(displayName, nameX, ty + tile * 0.32);
   ctx.shadowColor = "transparent";
 
-  // the site's own SEO line, under the name
+  // the site's own SEO line — below the whole favicon+name row, spanning
+  // the full panel width instead of just the name's column
   const tagline = opts.description ?? opts.title ?? "your ad, but bigger";
   ctx.font = font(400, 34);
   ctx.fillStyle = "rgba(255,255,255,0.78)";
   const taglineLineH = 42;
-  const taglineY = ty + tile * 0.68;
-  const descriptionMaxW = LW - nameX - 48;
+  const taglineY = ty + tile + 40;
+  const descriptionMaxW = LW - tx - 64;
   for (const [i, line] of wrapLines(ctx, tagline, descriptionMaxW, 3).entries()) {
-    ctx.fillText(line, nameX, taglineY + i * taglineLineH);
+    ctx.fillText(line, tx, taglineY + i * taglineLineH);
   }
 
   // price — moved down to the bottom, discreet but still legible, still white
