@@ -152,7 +152,7 @@ export default async function Image() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          background: `linear-gradient(180deg, ${PAL.skyTop} 0%, ${PAL.skyHorizon} 62%)`,
+          background: `radial-gradient(ellipse 700px 500px at 82% -8%, rgba(255,246,214,0.85) 0%, rgba(255,246,214,0) 55%), linear-gradient(180deg, ${shade(PAL.skyTop, -0.05)} 0%, ${PAL.skyTop} 38%, ${PAL.skyHorizon} 68%)`,
           fontFamily: "Outfit",
           position: "relative",
         }}
@@ -216,11 +216,26 @@ export default async function Image() {
               position: "relative",
               display: "flex",
               flex: 1,
-              // a couple of soft darker patches break up the flat fill, the
-              // same mottled look the real ground texture has
-              background: `radial-gradient(ellipse 260px 100px at 12% 20%, rgba(${rgbTriplet(PAL.grassDark)},0.32) 0%, rgba(${rgbTriplet(PAL.grassDark)},0) 70%), radial-gradient(ellipse 300px 110px at 90% 65%, rgba(${rgbTriplet(PAL.grassDark)},0.28) 0%, rgba(${rgbTriplet(PAL.grassDark)},0) 70%), linear-gradient(180deg, ${PAL.grassLight} 0%, ${PAL.grass} 100%)`,
+              // mowed-lawn stripes for real texture, plus a couple of soft
+              // darker patches so the fill still reads as ground, not wallpaper
+              background: `radial-gradient(ellipse 260px 100px at 12% 20%, rgba(${rgbTriplet(PAL.grassDark)},0.3) 0%, rgba(${rgbTriplet(PAL.grassDark)},0) 70%), radial-gradient(ellipse 300px 110px at 90% 65%, rgba(${rgbTriplet(PAL.grassDark)},0.26) 0%, rgba(${rgbTriplet(PAL.grassDark)},0) 70%), repeating-linear-gradient(70deg, rgba(${rgbTriplet(PAL.grassDark)},0.16) 0px, rgba(${rgbTriplet(PAL.grassDark)},0.16) 26px, rgba(255,255,255,0) 26px, rgba(255,255,255,0) 52px), linear-gradient(180deg, ${PAL.grassLight} 0%, ${PAL.grass} 100%)`,
             }}
           >
+            {/* the road receding to the horizon, continuing the flat lane
+                below up into the distance — the same driving-toward-it feel
+                the real highway has, not a road painted flat on a card */}
+            <div
+              style={{
+                position: "absolute",
+                display: "flex",
+                left: 0,
+                top: 0,
+                width: 1200,
+                height: 121,
+                background: `linear-gradient(180deg, ${shade(PAL.road, -0.1)} 0%, ${PAL.road} 100%)`,
+                clipPath: "polygon(555px 0px, 645px 0px, 860px 121px, 340px 121px)",
+              }}
+            />
             {pines.map((p, i) => (
               <Pine key={i} {...p} />
             ))}
@@ -299,7 +314,14 @@ export default async function Image() {
             and price, the same content the real billboard face shows */}
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center" }}>
           {leader ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                transform: "rotate(-1.6deg)",
+              }}
+            >
               {/* floodlights, lit — the same warm glow they get on hover in
                   the real scene, cast down onto the cap below them. Plain
                   flex + negative margin to overlap, same trick the cap/panel
@@ -404,8 +426,16 @@ export default async function Image() {
                   <div key={k} style={{ display: "flex", width: 16, height: 60, background: PAL.steelDark }} />
                 ))}
               </div>
-              <div style={{ display: "flex", marginTop: -14 }}>
-                <GroundShadow width={panelW * 0.62} height={26} />
+              <div style={{ display: "flex", marginTop: -22 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    width: panelW * 0.92,
+                    height: 40,
+                    borderRadius: "50%",
+                    background: "radial-gradient(ellipse, rgba(15,30,10,0.5) 0%, rgba(15,30,10,0) 72%)",
+                  }}
+                />
               </div>
             </div>
           ) : (
@@ -425,7 +455,8 @@ export default async function Image() {
             justifyContent: "center",
             fontSize: 26,
             fontWeight: 700,
-            color: "#3d5240",
+            color: "#ffffff",
+            textShadow: "0 2px 6px rgba(0,0,0,0.35)",
           }}
         >
           pay more · get bigger · get seen first
