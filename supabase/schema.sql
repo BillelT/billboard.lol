@@ -21,7 +21,8 @@ create table if not exists companies (
   description text,
   category text,
   enriched_at timestamptz,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  click_count bigint not null default 0
 );
 
 create table if not exists payments (
@@ -56,14 +57,34 @@ $$;
 
 grant execute on function bump_site_visits() to anon, authenticated;
 
--- current ranking = payments of the latest cycle, summed per company
+-- per-company click counter — bumped through an RPC (never written to
+-- directly) so the anon key can only ever add one, never set an arbitrary
+-- total. Counts total clicks for the company across every rank it has ever
+-- held, not just the current cycle.
+create or replace function bump_company_clicks(p_company_id uuid)
+returns bigint
+language sql
+security definer
+set search_path = public
+as $$
+  update companies set click_count = click_count + 1 where id = p_company_id
+  returning click_count;
+$$;
+
+grant execute on function bump_company_clicks(uuid) to anon, authenticated;
+
+-- current ranking = payments of the latest cycle, summed per company.
+-- claimed_at is the most recent payment that landed for that company — how
+-- long they've held their current standing, not when the company row itself
+-- was first created.
 create or replace view current_ranking as
 select c.id, c.name, c.url, c.color, c.icon_url, c.title, c.description, c.category,
+       c.click_count, max(p.created_at) as claimed_at,
        sum(p.amount) as total_amount
 from payments p
 join companies c on c.id = p.company_id
 where p.cycle_id = (select id from cycles order by starts_at desc limit 1)
-group by c.id, c.name, c.url, c.color, c.icon_url, c.title, c.description, c.category;
+group by c.id, c.name, c.url, c.color, c.icon_url, c.title, c.description, c.category, c.click_count;
 
 -- open the first cycle
 insert into cycles default values;

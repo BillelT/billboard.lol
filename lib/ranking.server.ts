@@ -12,6 +12,8 @@ interface Row {
   title: string | null;
   description: string | null;
   category: string | null;
+  click_count: string | number | null;
+  claimed_at: string | null;
   total_amount: string | number;
 }
 
@@ -48,7 +50,7 @@ export async function getRanking(): Promise<Billboard[]> {
 
   try {
     const res = await fetch(
-      `${url}/rest/v1/current_ranking?select=id,name,url,color,icon_url,title,description,category,total_amount&order=total_amount.desc&limit=25`,
+      `${url}/rest/v1/current_ranking?select=id,name,url,color,icon_url,title,description,category,click_count,claimed_at,total_amount&order=total_amount.desc&limit=25`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         next: { revalidate: 30 },
@@ -67,6 +69,8 @@ export async function getRanking(): Promise<Billboard[]> {
       description: r.description,
       iconUrl: r.icon_url,
       category: r.category,
+      clickCount: r.click_count == null ? null : Number(r.click_count),
+      claimedAt: r.claimed_at,
     }));
   } catch {
     return withAnchors(SEED);
