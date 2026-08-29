@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { makeBillboardGeometry } from "@/lib/geometry";
+import { makeBillboardGeometry, makeTreeGeometry } from "@/lib/geometry";
 import { FACE_RES, makeFaceTexture } from "@/lib/textures";
 import { iconSrc } from "@/lib/icons";
 import { PAL } from "@/lib/palette";
@@ -67,6 +67,11 @@ function Billboard({ data, icon }: { data: OgBillboardData; icon: HTMLImageEleme
 // down to what one centered billboard needs. The live scene's own Ground/Road
 // are built around the whole ranking's layout and decor density, which don't
 // apply to a single standalone panel.
+//
+// The billboard's own footprint (panel + posts) sits around z -1..0.5 — the
+// road has to stay well clear of that band, further toward the camera, or
+// the billboard reads as standing in the middle of the road instead of on
+// the grass beside it.
 function SimpleGround() {
   return (
     <>
@@ -74,10 +79,48 @@ function SimpleGround() {
         <planeGeometry args={[240, 240]} />
         <meshStandardMaterial color={PAL.grass} roughness={1} metalness={0} />
       </mesh>
-      <mesh position={[0, 0.02, -1]} receiveShadow>
-        <boxGeometry args={[80, 0.04, 9]} />
+      <mesh position={[0, 0.02, 8]} receiveShadow>
+        <boxGeometry args={[90, 0.04, 12]} />
         <meshStandardMaterial color={PAL.road} roughness={1} metalness={0} />
       </mesh>
+    </>
+  );
+}
+
+// A handful of the live scene's own low-poly trees, scattered behind and
+// beside the billboard for depth — the same geometry/palette Decor.tsx uses,
+// just a fixed hand-placed layout instead of a density-driven field.
+const TREE_LAYOUT: { kind: "round" | "tall" | "pine"; x: number; z: number; scale: number }[] = [
+  { kind: "pine", x: -24, z: -16, scale: 1.3 },
+  { kind: "round", x: -17, z: -23, scale: 1.15 },
+  { kind: "tall", x: -29, z: -9, scale: 1.35 },
+  { kind: "pine", x: -34, z: -22, scale: 1.05 },
+  { kind: "pine", x: 24, z: -18, scale: 1.2 },
+  { kind: "round", x: 18, z: -24, scale: 1.05 },
+  { kind: "tall", x: 30, z: -11, scale: 1.3 },
+  { kind: "pine", x: 35, z: -20, scale: 1.1 },
+];
+
+function Decor() {
+  const trees = useMemo(
+    () => TREE_LAYOUT.map((t) => ({ ...t, geometry: makeTreeGeometry(t.kind) })),
+    [],
+  );
+  useEffect(() => () => trees.forEach((t) => t.geometry.dispose()), [trees]);
+
+  return (
+    <>
+      {trees.map((t, i) => (
+        <mesh
+          key={i}
+          geometry={t.geometry}
+          material={vertexColorMat}
+          position={[t.x, 0, t.z]}
+          scale={t.scale}
+          castShadow
+          receiveShadow
+        />
+      ))}
     </>
   );
 }
@@ -130,19 +173,20 @@ export default function OgBillboardScene({ data }: { data: OgBillboardData }) {
           fov: 42,
           near: 1,
           far: 1700, // SkyDome is a radius-1500 sphere — must stay inside far
-          position: [0, POLE_H * 0.85, PANEL_W * 1.35],
+          position: [0, POLE_H * 1.1, PANEL_W * 1.85],
         }}
         gl={{ antialias: true, powerPreference: "high-performance", stencil: false, alpha: false }}
         onCreated={({ gl, camera }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 0.9;
-          camera.lookAt(0, POLE_H + PANEL_H * 0.42, 0);
+          camera.lookAt(0, POLE_H + PANEL_H * 0.4, 0);
         }}
       >
         <fog attach="fog" args={[PAL.fog, 60, 260]} />
         <SkyDome />
         <Lights />
         <SimpleGround />
+        <Decor />
         <Billboard data={data} icon={icon} />
         {iconSettled && <ReadySignal onReady={() => setReady(true)} />}
       </Canvas>
