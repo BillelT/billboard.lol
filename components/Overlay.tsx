@@ -342,7 +342,7 @@ export default function Overlay() {
       <div className="dock">
         <div className="dock__inner" ref={dockRef}>
           <h1 className="dock__title">
-            {amountTouched ? `Get rank #${rank} for` : "Get the biggest billboard for"}
+            {rank === 1 ? "Get the biggest billboard for" : `Get the #${rank} billboard for`}
             <span className="meter">
               <button className="meter__step" onClick={() => step(-1)} aria-label="lower the amount by 1">
                 −
