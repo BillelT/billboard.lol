@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
-import { ANCHOR_CATEGORIES, ANCHOR_CLICK_COUNTS, ANCHOR_DOMAINS, SEED, anchorClaimedAt } from "@/lib/seed";
+import { ANCHOR_DOMAINS, SEED } from "@/lib/seed";
 import type { Billboard } from "@/lib/types";
 
 interface SiteInfoResponse {
@@ -38,9 +38,6 @@ async function anchorSeed(): Promise<Billboard[]> {
       title: info.title,
       description: info.description,
       iconUrl: info.iconUrl,
-      category: ANCHOR_CATEGORIES[i],
-      clickCount: ANCHOR_CLICK_COUNTS[i],
-      claimedAt: anchorClaimedAt(i),
       placeholder: false,
     };
   });
@@ -79,9 +76,7 @@ export default function DataSync() {
       const fetchRanking = async () => {
         const { data, error } = await supabase
           .from("current_ranking")
-          .select(
-            "id,name,url,color,icon_url,title,description,category,click_count,claimed_at,total_amount",
-          )
+          .select("id,name,url,color,icon_url,title,description,category,total_amount")
           .order("total_amount", { ascending: false });
         if (!error && data && data.length > 0) {
           setBillboards(
@@ -96,8 +91,6 @@ export default function DataSync() {
                 description: r.description,
                 iconUrl: r.icon_url,
                 category: r.category,
-                clickCount: r.click_count == null ? null : Number(r.click_count),
-                claimedAt: r.claimed_at,
               }),
             ),
           );

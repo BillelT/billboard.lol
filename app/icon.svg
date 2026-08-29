@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#5fb0ec"/>
+  <!-- gavel head -->
+  <rect x="14" y="14" width="26" height="14" rx="3" fill="#ffffff" transform="rotate(-40 14 14)"/>
+  <rect x="10" y="10" width="10" height="10" rx="2" fill="#1f2733" transform="rotate(-40 15 15)"/>
+  <!-- gavel handle -->
+  <rect x="30" y="26" width="24" height="7" rx="3.5" fill="#1f2733" transform="rotate(-40 30 26)"/>
+  <!-- sound block -->
+  <rect x="34" y="46" width="24" height="7" rx="2" fill="#ffffff"/>
+</svg>

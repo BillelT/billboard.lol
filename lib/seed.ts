@@ -32,19 +32,3 @@ export const SEED: Billboard[] = [1, 1, 0].map((amount, i) => ({
 // domains (favicon, SEO copy, colour — fetched live, see withAnchors below)
 // instead of staying empty, so the road never opens on a totally bare ranking.
 export const ANCHOR_DOMAINS = ["billeltighidet.fr", "lacompagniedesinternetsbordelaise.fr"];
-
-// Categories aren't scraped off the site — a real buyer picks one at checkout
-// — so the anchors need one hardcoded here, same index order as
-// ANCHOR_DOMAINS, purely to have the category label rendered on the highway.
-export const ANCHOR_CATEGORIES = ["Design & Creative", "Other"];
-
-// Same story for clicks and claim freshness — real numbers only exist once a
-// company has actually been clicked or paid for, which the anchors never do.
-// Claimed-at is kept as an offset and turned into an ISO timestamp on demand
-// so the "X ago" label stays sensible instead of freezing to the moment this
-// file was written.
-export const ANCHOR_CLICK_COUNTS = [128, 47];
-const ANCHOR_CLAIMED_MINUTES_AGO = [45, 2880]; // 45m ago, 2d ago
-export function anchorClaimedAt(i: number): string {
-  return new Date(Date.now() - ANCHOR_CLAIMED_MINUTES_AGO[i] * 60_000).toISOString();
-}

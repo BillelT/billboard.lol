@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
 import type * as THREE from "three";
-import { bumpClicks } from "@/lib/clicks";
 import { debugState } from "@/lib/debugState";
 import { interactionState } from "@/lib/interactionState";
 import { BILL_Z } from "@/lib/layout";
@@ -190,13 +189,6 @@ export default function GrabNav() {
 const onDown = (e: PointerEvent) => {
   if (e.button !== 0 && e.pointerType === "mouse") return;
 
-  // Suppress the browser's native pointerdown default (text/drag selection).
-  // Without this, a fast click-spam on a car (which returns below without
-  // ever taking pointer capture) can leave the browser mid native
-  // selection-drag, which then fights the next real drag gesture and shows
-  // a stuck "not-allowed" cursor.
-  e.preventDefault();
-
   // 1. Détection prioritaire : est-ce qu'on clique sur une voiture (ou dans son timer sticky) ?
   const carHit = hitTestCar(e.clientX, e.clientY);
   const now = performance.now();
@@ -260,7 +252,6 @@ const onUp = (e: PointerEvent) => {
       if (hit.placeholder) {
         useStore.getState().openBuyModal({ rank: hit.rank, amount: hit.amount });
       } else if (hit.url) {
-        bumpClicks(hit.id);
         window.open(hit.url, "_blank", "noopener,noreferrer");
       }
     }

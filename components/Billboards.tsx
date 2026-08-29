@@ -34,7 +34,7 @@ function BillboardItem({ item }: { item: LayoutItem }) {
   );
   useEffect(() => () => geometry.dispose(), [geometry]);
 
-  const faceKey = `${item.name}|${item.color}|${item.amount}|${item.rank}|${item.category ?? ""}|${item.clickCount ?? 0}|${item.claimedAt ?? ""}`;
+  const faceKey = `${item.name}|${item.color}|${item.amount}|${item.rank}|${item.category ?? ""}`;
   useEffect(
     () => () => {
       painted.current?.tex.dispose();
@@ -80,8 +80,6 @@ function BillboardItem({ item }: { item: LayoutItem }) {
         title: item.title,
         description: item.description,
         category: item.category,
-        clickCount: item.clickCount,
-        claimedAt: item.claimedAt,
       });
       painted.current = { key: texKey, tex };
       mat.map = tex;
