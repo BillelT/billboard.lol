@@ -182,7 +182,7 @@ export function makeFaceTexture(opts: {
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#ffffff";
-  ctx.font = font(600, 60);
+  ctx.font = font(600, 72);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowOffsetY = 3;
   ctx.fillText(`#${opts.rank}`, LW - 64, 42 + 19);
@@ -225,7 +225,7 @@ export function makeFaceTexture(opts: {
   if (opts.clickCount != null) statParts.push(`${opts.clickCount.toLocaleString("en-US")} clicks`);
   if (statParts.length) {
     ctx.font = font(400, 28);
-    ctx.fillStyle = "rgba(255,255,255,0.68)";
+    ctx.fillStyle = "rgba(255,255,255,0.80)";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     ctx.fillText(statParts.join("  ·  "), tx, rowY);
@@ -259,7 +259,7 @@ export function makeFaceTexture(opts: {
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#ffffff";
-  ctx.font = font(600, 44);
+  ctx.font = font(500, 40);
   ctx.shadowColor = "rgba(0,0,0,0.18)";
   ctx.shadowOffsetY = 3;
   ctx.fillText(fmtUSD(opts.amount), LW - 64, rowY);
