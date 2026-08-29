@@ -1,5 +1,5 @@
 import "server-only";
-import { ANCHOR_CATEGORIES, ANCHOR_DOMAINS, SEED } from "./seed";
+import { ANCHOR_CATEGORIES, ANCHOR_CLICK_COUNTS, ANCHOR_DOMAINS, SEED, anchorClaimedAt } from "./seed";
 import { fetchSiteInfo } from "./siteinfo.server";
 import type { Billboard } from "./types";
 
@@ -35,6 +35,8 @@ async function withAnchors(seed: Billboard[]): Promise<Billboard[]> {
       description: info.description,
       iconUrl: info.iconUrl,
       category: ANCHOR_CATEGORIES[i],
+      clickCount: ANCHOR_CLICK_COUNTS[i],
+      claimedAt: anchorClaimedAt(i),
       placeholder: false,
     };
   });
