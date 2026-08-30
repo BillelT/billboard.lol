@@ -969,6 +969,39 @@ body {
   padding: 3px;
 }
 
+/* ---------- og scene builder (/og-render?debug=1) ---------- */
+.og-panel {
+  width: 300px;
+}
+.og-panel .dbg-row {
+  grid-template-columns: 82px 1fr;
+}
+.og-panel .dbg-row input[type="text"],
+.og-panel .dbg-row input[type="number"] {
+  font: inherit;
+  width: 100%;
+  color: #e8f0f7;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 5px;
+  padding: 3px 5px;
+}
+.og-panel section {
+  margin-top: 8px;
+}
+.og-panel-error {
+  margin: 6px 0 0;
+  color: #ff9d9d;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.og-panel-preview {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  border-radius: 6px;
+}
+
 /* ---------------- buy modal: clicking an empty slot in the scene ---------- */
 .scrim {
   position: fixed;
