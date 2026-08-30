@@ -21,7 +21,7 @@ export const debugState = {
     near: 0, // where haze starts, relative to the subject
     far: 2100, // where it tops out — larger is softer, more gradual
     density: 0.0015, // exp2 only
-    color: "#e6f3ff",
+    color: "#ddedfd",
   },
   light: {
     exposure: 0.82,
