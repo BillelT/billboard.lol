@@ -740,16 +740,18 @@ body {
 }
 
 @media (max-width: 720px) {
+  .masthead {
+    justify-content: left;
+  }
+
   /* stacked and centered right above the dock, trimmed to the numbers that
      matter at a glance — the rest stays a desktop-only rail */
   .gauges {
     left: 16px;
     right: 16px;
-    top: auto;
-    bottom: calc(var(--dock-h, 210px) + 32px);
+    top: 76px;
     transform: none;
     flex-direction: column;
-    align-items: center;
     gap: 6px;
   }
   .gauge {
@@ -758,8 +760,6 @@ body {
     font-size: 13px;
     /* floating and centered here, not docked to an edge — the flag-shaped
        accent border only read right when it was flush against the rail */
-    border: var(--edge-soft);
-    border-radius: 999px;
   }
   /* narrowest at the top, widest right against the dock it feeds into */
   .gauge--made {
@@ -839,9 +839,7 @@ body {
   .modal__cta {
     font-size: 16px;
   }
-}
 
-@media (max-width: 600px) {
   .dock__title {
     font-size: 18px;
   }
