@@ -6,9 +6,9 @@ import { NIGHT } from "@/lib/nightPalette";
 import { BILL_Z } from "@/lib/layout";
 
 // One dim, cool moon fill (see Lights.tsx for its daytime counterpart) plus
-// two spotlights standing in for the billboard's own floodlights — one bright
-// and steady, one dead-and-flickering to match the crooked lamp modelled in
-// nightGeometry's makeBrokenBillboardGeometry.
+// a single dead-and-flickering spotlight standing in for the billboard's own
+// floodlight, matching the crooked lamp modelled in nightGeometry's
+// makeBrokenBillboardGeometry — the other lamp is fully out, no light at all.
 function LampSpot({ x, intensity, flicker }: { x: number; intensity: number; flicker?: boolean }) {
   const light = useRef<THREE.SpotLight>(null);
   const target = useRef<THREE.Object3D>(null);
@@ -52,9 +52,8 @@ export default function Night404Lights() {
     <>
       <hemisphereLight args={[NIGHT.hemiSky, NIGHT.hemiGround, 0.9]} />
       <directionalLight color={NIGHT.moonLight} intensity={0.55} position={[-40, 70, 50]} />
-      {/* x=-4.3 is the dead/crooked lamp modelled in nightGeometry, x=+4.3 the live one */}
+      {/* x=-4.3 is the dead/crooked lamp modelled in nightGeometry; the other (x=+4.3) is dark and gets no light at all */}
       <LampSpot x={-4.3} intensity={40} flicker />
-      <LampSpot x={4.3} intensity={95} />
     </>
   );
 }
