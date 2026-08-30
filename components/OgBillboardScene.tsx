@@ -352,59 +352,61 @@ function buildDefaultScene(): SceneConfig {
   const bushes: BushItem[] = [];
   const grass: GrassItem[] = [];
 
-  // Bande proche : sol de part et d'autre du billboard, juste après la route
-  for (let i = 0; i < 30; i++) {
-    const { x, z } = clearing(16, 34, -0.5, 0.95);
+// Bande proche : Début repoussé (26) pour supprimer l'arbre isolé collé à la route.
+  // On réduit l'extension à droite (1.0) pour rééquilibrer la scène.
+  for (let i = 0; i < 12; i++) { 
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
     trees.push({ kind: pick(kinds), x, z, scale: rand(0.8, 1.2) });
   }
-  for (let i = 0; i < 16; i++) {
-    const { x, z } = clearing(16, 34, -0.5, 0.95);
+  for (let i = 0; i < 6; i++) {
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
     bushes.push({ x, z, scale: rand(0.6, 1.0) });
   }
-  for (let i = 0; i < 10; i++) {
-    const { x, z } = clearing(16, 34, -0.5, 0.95);
+  for (let i = 0; i < 4; i++) {
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
     rocks.push({ x, z, scale: rand(0.35, 0.65) });
   }
-  for (let i = 0; i < 30; i++) {
-    const { x, z } = clearing(16, 34, -0.5, 0.95);
+  for (let i = 0; i < 15; i++) {
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
     grass.push({ x, z, scale: rand(0.7, 1.2) });
   }
 
-  // Bande médiane : profondeur intermédiaire, échelle un peu réduite
-  for (let i = 0; i < 28; i++) {
-    const { x, z } = clearing(34, 65, -0.45, 0.9);
+  // Bande médiane : Décalage fort vers la gauche (-0.7) et augmentation 
+  // des quantités pour saturer la zone orange de l'image.
+  for (let i = 0; i < 65; i++) {
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
     trees.push({ kind: pick(kinds), x, z, scale: rand(0.55, 0.95) });
   }
-  for (let i = 0; i < 12; i++) {
-    const { x, z } = clearing(34, 65, -0.45, 0.9);
+  for (let i = 0; i < 20; i++) {
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
     bushes.push({ x, z, scale: rand(0.5, 0.85) });
   }
-  for (let i = 0; i < 8; i++) {
-    const { x, z } = clearing(34, 65, -0.45, 0.9);
+  for (let i = 0; i < 12; i++) {
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
     rocks.push({ x, z, scale: rand(0.3, 0.55) });
   }
-  for (let i = 0; i < 20; i++) {
-    const { x, z } = clearing(34, 65, -0.45, 0.9);
+  for (let i = 0; i < 25; i++) {
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
     grass.push({ x, z, scale: rand(0.6, 1.0) });
   }
 
-  // Arrière-plan : comble le vide de colline nue vers l'horizon
-  for (let i = 0; i < 32; i++) {
-    const { x, z } = clearing(65, 120, -0.4, 0.85);
+  // Arrière-plan : Toujours orienté vers la gauche (-0.55) avec une densité élevée.
+  for (let i = 0; i < 75; i++) { 
+    const { x, z } = clearing(85, 135, -0.55, 0.8);
     trees.push({ kind: pick(kinds), x, z, scale: rand(0.35, 0.7) });
   }
-  for (let i = 0; i < 10; i++) {
-    const { x, z } = clearing(65, 120, -0.4, 0.85);
+  for (let i = 0; i < 15; i++) {
+    const { x, z } = clearing(85, 135, -0.55, 0.8);
     bushes.push({ x, z, scale: rand(0.3, 0.55) });
   }
-  for (let i = 0; i < 14; i++) {
-    const { x, z } = clearing(65, 120, -0.4, 0.85);
+  for (let i = 0; i < 20; i++) {
+    const { x, z } = clearing(85, 135, -0.55, 0.8);
     grass.push({ x, z, scale: rand(0.5, 0.85) });
   }
 
-  // Très lointain : une forêt qui s'estompe dans la brume jusqu'à l'horizon
-  for (let i = 0; i < 24; i++) {
-    const { x, z } = clearing(120, 200, -0.35, 0.8);
+  // Très lointain : Recentré doucement pour fondre l'horizon.
+  for (let i = 0; i < 35; i++) {
+    const { x, z } = clearing(135, 175, -0.4, 0.7);
     trees.push({ kind: pick(kinds), x, z, scale: rand(0.25, 0.45) });
   }
 
@@ -412,9 +414,9 @@ function buildDefaultScene(): SceneConfig {
     camera: {
       // Shifted to the billboard's right, looking back across an empty
       // stretch of decor on the left — that's where the OG UI overlay sits.
-      x: 9,
+      x: 9.5,
       y: 10,
-      z: 18,
+      z: 17,
       lookX: -7,
       lookY: 7.5,
       lookZ: 0,
