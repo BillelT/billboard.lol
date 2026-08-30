@@ -375,12 +375,12 @@ function buildDefaultScene(): SceneConfig {
     poles: [{ x: 25, z: 0, scale: 1.15 }, { x: 52, z: -5, scale: 1.10 }],
     
     clouds: [
-      { x: -35, y: 21, z: -40, scale: 3.0 },
+      { x: 60, y: 21, z: -25, scale: 3.0 },
       { x: 12,  y: 26, z: -50, scale: 2.8 },
-      { x: 45,  y: 19, z: -60, scale: 4.2 },
+      { x: 41,  y: 21, z: -60, scale: 4.2 },
       { x: -15, y: 28, z: -80, scale: 4.5 },
-      { x: 75,  y: 22, z: -70, scale: 3.5 },
-      { x: -60, y: 19, z: -65, scale: 2.9 },
+      { x: 75,  y: 36.2, z: -67, scale: 4.5 },
+      { x: -30, y: 18, z: -65, scale: 2.0 },
     ],
   };
 }
