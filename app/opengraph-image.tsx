@@ -18,11 +18,11 @@ const SITE_URL =
 // A real 3D screenshot of the current #1, not a flat CSS mock of one. Cached
 // by the leader's own id, so the (expensive, headless-browser) render only
 // happens again when a new company actually takes the top spot — never on a
-// timer, and never for a click/amount tick from the same leader. Bump
-// OG_RENDER_VERSION whenever the scene/composition changes so a deploy
-// invalidates the cache for the current leader too, instead of waiting for
-// the podium to change.
-const OG_RENDER_VERSION = "v3";
+// timer, and never for a click/amount tick from the same leader. The commit
+// SHA is folded into the cache key too (Vercel sets it on every deploy), so
+// a scene/composition change also gets a fresh render for whoever is
+// currently leading — no manual version bump needed.
+const OG_RENDER_VERSION = process.env.VERCEL_GIT_COMMIT_SHA || "dev";
 const renderLeaderOg = unstable_cache(async (leaderId: string): Promise<string | null> => {
   const ranking = await getRanking();
   const leader = ranking.find((b) => b.id === leaderId);
