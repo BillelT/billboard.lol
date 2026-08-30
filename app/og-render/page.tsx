@@ -16,7 +16,10 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 function isAuthorized(params: Record<string, string | undefined>): boolean {
   if (process.env.NODE_ENV !== "production") return true;
   const secret = process.env.OG_RENDER_SECRET;
-  return Boolean(secret) && params.key === secret;
+  // Fail open until the secret is actually configured on the deployment —
+  // an unset secret must never take the real OG image down with it.
+  if (!secret) return true;
+  return params.key === secret;
 }
 
 export default async function OgRenderPage({
