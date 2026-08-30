@@ -1,26 +1,12 @@
 "use client";
 import { useRef, useState } from "react";
 import type { OgBillboardData } from "./OgBillboardScene";
-import {
-  DEFAULT_SCENE_CONFIG,
-  type BushItem,
-  type CameraConfig,
-  type CloudItem,
-  type GrassItem,
-  type HillItem,
-  type PoleItem,
-  type RockItem,
-  type SceneConfig,
-  type TreeItem,
-} from "./OgBillboardScene";
+import { DEFAULT_SCENE_CONFIG, type CameraConfig, type SceneConfig } from "./OgBillboardScene";
+import OgSceneMap from "./OgSceneMap";
 
 const CAMERA_FIELDS: { key: keyof CameraConfig; label: string; min: number; max: number; step: number }[] = [
-  { key: "x", label: "pos x", min: -60, max: 60, step: 0.5 },
-  { key: "y", label: "pos y", min: 0, max: 60, step: 0.5 },
-  { key: "z", label: "pos z", min: 5, max: 100, step: 0.5 },
-  { key: "lookX", label: "look x", min: -60, max: 60, step: 0.5 },
-  { key: "lookY", label: "look y", min: 0, max: 60, step: 0.5 },
-  { key: "lookZ", label: "look z", min: -60, max: 60, step: 0.5 },
+  { key: "y", label: "height", min: 0, max: 30, step: 0.25 },
+  { key: "lookY", label: "look height", min: 0, max: 30, step: 0.25 },
   { key: "fov", label: "fov", min: 20, max: 90, step: 1 },
 ];
 
@@ -29,8 +15,8 @@ function encodeScene(scene: SceneConfig): string {
 }
 
 // Scene-builder panel for /og-render?debug=1 — fully malleable 3D OG scene:
-// drag the panel anywhere, move the camera, and add/move/remove every tree,
-// rock, cloud and hill, on top of the existing billboard-content fields.
+// drag the panel anywhere, drag the camera/decor dots on the top-down map,
+// tune height/fov with sliders, on top of the billboard-content fields.
 export default function OgScenePanel({
   data,
   onDataChange,
@@ -58,48 +44,6 @@ export default function OgScenePanel({
   const setCamera = (key: keyof CameraConfig, value: number) => {
     onSceneChange({ ...scene, camera: { ...scene.camera, [key]: value } });
   };
-
-  const updateTree = (i: number, patch: Partial<TreeItem>) => {
-    onSceneChange({ ...scene, trees: scene.trees.map((t, idx) => (idx === i ? { ...t, ...patch } : t)) });
-  };
-  const addTree = () => onSceneChange({ ...scene, trees: [...scene.trees, { kind: "round", x: 0, z: -20, scale: 1 }] });
-  const removeTree = (i: number) => onSceneChange({ ...scene, trees: scene.trees.filter((_, idx) => idx !== i) });
-
-  const updateRock = (i: number, patch: Partial<RockItem>) => {
-    onSceneChange({ ...scene, rocks: scene.rocks.map((r, idx) => (idx === i ? { ...r, ...patch } : r)) });
-  };
-  const addRock = () => onSceneChange({ ...scene, rocks: [...scene.rocks, { x: 0, z: 5, scale: 0.5 }] });
-  const removeRock = (i: number) => onSceneChange({ ...scene, rocks: scene.rocks.filter((_, idx) => idx !== i) });
-
-  const updateBush = (i: number, patch: Partial<BushItem>) => {
-    onSceneChange({ ...scene, bushes: scene.bushes.map((b, idx) => (idx === i ? { ...b, ...patch } : b)) });
-  };
-  const addBush = () => onSceneChange({ ...scene, bushes: [...scene.bushes, { x: 0, z: 3, scale: 1 }] });
-  const removeBush = (i: number) => onSceneChange({ ...scene, bushes: scene.bushes.filter((_, idx) => idx !== i) });
-
-  const updateGrass = (i: number, patch: Partial<GrassItem>) => {
-    onSceneChange({ ...scene, grass: scene.grass.map((g, idx) => (idx === i ? { ...g, ...patch } : g)) });
-  };
-  const addGrass = () => onSceneChange({ ...scene, grass: [...scene.grass, { x: 0, z: -5, scale: 1 }] });
-  const removeGrass = (i: number) => onSceneChange({ ...scene, grass: scene.grass.filter((_, idx) => idx !== i) });
-
-  const updatePole = (i: number, patch: Partial<PoleItem>) => {
-    onSceneChange({ ...scene, poles: scene.poles.map((p, idx) => (idx === i ? { ...p, ...patch } : p)) });
-  };
-  const addPole = () => onSceneChange({ ...scene, poles: [...scene.poles, { x: 20, z: 16, scale: 1 }] });
-  const removePole = (i: number) => onSceneChange({ ...scene, poles: scene.poles.filter((_, idx) => idx !== i) });
-
-  const updateCloud = (i: number, patch: Partial<CloudItem>) => {
-    onSceneChange({ ...scene, clouds: scene.clouds.map((c, idx) => (idx === i ? { ...c, ...patch } : c)) });
-  };
-  const addCloud = () => onSceneChange({ ...scene, clouds: [...scene.clouds, { x: 0, y: 30, z: -60, scale: 3 }] });
-  const removeCloud = (i: number) => onSceneChange({ ...scene, clouds: scene.clouds.filter((_, idx) => idx !== i) });
-
-  const updateHill = (i: number, patch: Partial<HillItem>) => {
-    onSceneChange({ ...scene, hills: scene.hills.map((h, idx) => (idx === i ? { ...h, ...patch } : h)) });
-  };
-  const addHill = () => onSceneChange({ ...scene, hills: [...scene.hills, { x: 0, z: -80, sx: 60, sy: 13 }] });
-  const removeHill = (i: number) => onSceneChange({ ...scene, hills: scene.hills.filter((_, idx) => idx !== i) });
 
   const dataQuery = () => {
     const qs = new URLSearchParams();
@@ -225,6 +169,14 @@ export default function OgScenePanel({
           </section>
 
           <section>
+            <h4>Scene map</h4>
+            <p className="og-map-hint">
+              Drag the dots to move decor, the ▲ to move the camera, the ring to aim it.
+            </p>
+            <OgSceneMap scene={scene} onSceneChange={onSceneChange} />
+          </section>
+
+          <section>
             <h4>Camera</h4>
             {CAMERA_FIELDS.map((f) => (
               <label key={f.key} className="dbg-row">
@@ -240,166 +192,6 @@ export default function OgScenePanel({
                 <b>{scene.camera[f.key].toFixed(1)}</b>
               </label>
             ))}
-          </section>
-
-          <section>
-            <h4>Trees ({scene.trees.length})</h4>
-            {scene.trees.map((t, i) => (
-              <div key={i} className="og-item-row">
-                <select value={t.kind} onChange={(e) => updateTree(i, { kind: e.target.value as TreeItem["kind"] })}>
-                  <option value="round">round</option>
-                  <option value="tall">tall</option>
-                  <option value="pine">pine</option>
-                </select>
-                <input type="number" step={0.5} value={t.x} onChange={(e) => updateTree(i, { x: Number(e.target.value) })} title="x" />
-                <input type="number" step={0.5} value={t.z} onChange={(e) => updateTree(i, { z: Number(e.target.value) })} title="z" />
-                <input
-                  type="number"
-                  step={0.05}
-                  value={t.scale}
-                  onChange={(e) => updateTree(i, { scale: Number(e.target.value) })}
-                  title="scale"
-                />
-                <button onClick={() => removeTree(i)}>×</button>
-              </div>
-            ))}
-            <button onClick={addTree} style={{ width: "100%" }}>
-              + tree
-            </button>
-          </section>
-
-          <section>
-            <h4>Rocks ({scene.rocks.length})</h4>
-            {scene.rocks.map((r, i) => (
-              <div key={i} className="og-item-row og-item-row-3">
-                <input type="number" step={0.5} value={r.x} onChange={(e) => updateRock(i, { x: Number(e.target.value) })} title="x" />
-                <input type="number" step={0.5} value={r.z} onChange={(e) => updateRock(i, { z: Number(e.target.value) })} title="z" />
-                <input
-                  type="number"
-                  step={0.05}
-                  value={r.scale}
-                  onChange={(e) => updateRock(i, { scale: Number(e.target.value) })}
-                  title="scale"
-                />
-                <button onClick={() => removeRock(i)}>×</button>
-              </div>
-            ))}
-            <button onClick={addRock} style={{ width: "100%" }}>
-              + rock
-            </button>
-          </section>
-
-          <section>
-            <h4>Bushes ({scene.bushes.length})</h4>
-            {scene.bushes.map((b, i) => (
-              <div key={i} className="og-item-row og-item-row-3">
-                <input type="number" step={0.5} value={b.x} onChange={(e) => updateBush(i, { x: Number(e.target.value) })} title="x" />
-                <input type="number" step={0.5} value={b.z} onChange={(e) => updateBush(i, { z: Number(e.target.value) })} title="z" />
-                <input
-                  type="number"
-                  step={0.05}
-                  value={b.scale}
-                  onChange={(e) => updateBush(i, { scale: Number(e.target.value) })}
-                  title="scale"
-                />
-                <button onClick={() => removeBush(i)}>×</button>
-              </div>
-            ))}
-            <button onClick={addBush} style={{ width: "100%" }}>
-              + bush
-            </button>
-          </section>
-
-          <section>
-            <h4>Grass tufts ({scene.grass.length})</h4>
-            {scene.grass.map((g, i) => (
-              <div key={i} className="og-item-row og-item-row-3">
-                <input type="number" step={0.5} value={g.x} onChange={(e) => updateGrass(i, { x: Number(e.target.value) })} title="x" />
-                <input type="number" step={0.5} value={g.z} onChange={(e) => updateGrass(i, { z: Number(e.target.value) })} title="z" />
-                <input
-                  type="number"
-                  step={0.05}
-                  value={g.scale}
-                  onChange={(e) => updateGrass(i, { scale: Number(e.target.value) })}
-                  title="scale"
-                />
-                <button onClick={() => removeGrass(i)}>×</button>
-              </div>
-            ))}
-            <button onClick={addGrass} style={{ width: "100%" }}>
-              + grass tuft
-            </button>
-          </section>
-
-          <section>
-            <h4>Poles ({scene.poles.length})</h4>
-            {scene.poles.map((p, i) => (
-              <div key={i} className="og-item-row og-item-row-3">
-                <input type="number" step={0.5} value={p.x} onChange={(e) => updatePole(i, { x: Number(e.target.value) })} title="x" />
-                <input type="number" step={0.5} value={p.z} onChange={(e) => updatePole(i, { z: Number(e.target.value) })} title="z" />
-                <input
-                  type="number"
-                  step={0.05}
-                  value={p.scale}
-                  onChange={(e) => updatePole(i, { scale: Number(e.target.value) })}
-                  title="scale"
-                />
-                <button onClick={() => removePole(i)}>×</button>
-              </div>
-            ))}
-            <button onClick={addPole} style={{ width: "100%" }}>
-              + pole
-            </button>
-          </section>
-
-          <section>
-            <h4>Clouds ({scene.clouds.length})</h4>
-            {scene.clouds.map((c, i) => (
-              <div key={i} className="og-item-row og-item-row-4">
-                <input type="number" step={1} value={c.x} onChange={(e) => updateCloud(i, { x: Number(e.target.value) })} title="x" />
-                <input type="number" step={1} value={c.y} onChange={(e) => updateCloud(i, { y: Number(e.target.value) })} title="y" />
-                <input type="number" step={1} value={c.z} onChange={(e) => updateCloud(i, { z: Number(e.target.value) })} title="z" />
-                <input
-                  type="number"
-                  step={0.1}
-                  value={c.scale}
-                  onChange={(e) => updateCloud(i, { scale: Number(e.target.value) })}
-                  title="scale"
-                />
-                <button onClick={() => removeCloud(i)}>×</button>
-              </div>
-            ))}
-            <button onClick={addCloud} style={{ width: "100%" }}>
-              + cloud
-            </button>
-          </section>
-
-          <section>
-            <h4>Hills ({scene.hills.length})</h4>
-            {scene.hills.map((h, i) => (
-              <div key={i} className="og-item-row og-item-row-4">
-                <input type="number" step={1} value={h.x} onChange={(e) => updateHill(i, { x: Number(e.target.value) })} title="x" />
-                <input type="number" step={1} value={h.z} onChange={(e) => updateHill(i, { z: Number(e.target.value) })} title="z" />
-                <input
-                  type="number"
-                  step={1}
-                  value={h.sx}
-                  onChange={(e) => updateHill(i, { sx: Number(e.target.value) })}
-                  title="width"
-                />
-                <input
-                  type="number"
-                  step={0.5}
-                  value={h.sy}
-                  onChange={(e) => updateHill(i, { sy: Number(e.target.value) })}
-                  title="height"
-                />
-                <button onClick={() => removeHill(i)}>×</button>
-              </div>
-            ))}
-            <button onClick={addHill} style={{ width: "100%" }}>
-              + hill
-            </button>
           </section>
 
           <section>

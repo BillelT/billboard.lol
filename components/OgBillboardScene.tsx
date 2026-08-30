@@ -33,14 +33,14 @@ export interface OgBillboardData {
 // A single, standalone-sized panel — the OG card isn't tied to the live
 // ranking's rank-scaled dimensions, just a clearly-legible #1 billboard.
 const PANEL_H = 7.4;
-const PANEL_W = PANEL_H * 1.9;
+export const PANEL_W = PANEL_H * 1.9;
 const POLE_H = 1.8 + PANEL_H * 0.36;
 
 // The road (a straight strip along X, the same axis the billboard sits on,
 // echoing the live scene's highway) is centered on this Z and this wide —
 // everything else (decor zones, terrain flattening) is measured against it.
-const ROAD_Z = 8;
-const ROAD_HALF_W = 6;
+export const ROAD_Z = 8;
+export const ROAD_HALF_W = 6;
 
 export interface TreeItem {
   kind: "round" | "tall" | "pine";
@@ -404,16 +404,34 @@ function mulberry32(seed: number) {
   };
 }
 
-// A hand-tuned but organically-scattered default scene: dense clustered
-// tree lines behind the billboard, a couple of big trees close to camera on
-// either side for foreground framing, rocks/bushes/grass tucked along the
-// roadside, one utility pole, and soft background hills — replacing the old
-// perfectly mirrored grid layout.
+// Nothing low should spawn right against the billboard's own footprint —
+// that's where the crossbar and posts are, and a grass tuft or bush poking
+// out of them there reads as a modeling glitch, not scenery.
+const BILLBOARD_CLEAR_X = 8.5;
+const BILLBOARD_CLEAR_Z: [number, number] = [-4, 4];
+function clearsBillboard(x: number, z: number): boolean {
+  return Math.abs(x) > BILLBOARD_CLEAR_X || z < BILLBOARD_CLEAR_Z[0] || z > BILLBOARD_CLEAR_Z[1];
+}
+
+// A hand-tuned but organically-scattered default scene: tree lines running
+// both behind the billboard and out into the depth of the camera's actual
+// field of view alongside the road (not just mirrored directly behind it),
+// rocks/bushes/grass tucked along the roadside clear of the billboard's own
+// footprint, one utility pole, and soft background hills.
 function buildDefaultScene(): SceneConfig {
   const rng = mulberry32(20260830);
   const rand = (a: number, b: number) => a + rng() * (b - a);
   const kinds: TreeItem["kind"][] = ["round", "tall", "pine"];
   const pick = <T,>(arr: T[]): T => arr[Math.floor(rng() * arr.length)];
+  const clearing = (gen: () => { x: number; z: number }) => {
+    let p = gen();
+    let tries = 0;
+    while (!clearsBillboard(p.x, p.z) && tries < 8) {
+      p = gen();
+      tries++;
+    }
+    return p;
+  };
 
   const trees: TreeItem[] = [];
   const rocks: RockItem[] = [];
@@ -421,48 +439,52 @@ function buildDefaultScene(): SceneConfig {
   const grass: GrassItem[] = [];
 
   for (const side of [-1, 1] as const) {
-    // foreground framing trees, between the road and the camera
-    for (let i = 0; i < 2; i++) {
-      trees.push({ kind: pick(kinds), x: side * rand(11, 21), z: rand(15, 19), scale: rand(1.55, 1.95) });
+    // dense band right beside/behind the billboard, receding into the frame
+    for (let i = 0; i < 7; i++) {
+      const { x, z } = clearing(() => ({ x: side * rand(9, 26), z: rand(-22, -2) }));
+      trees.push({ kind: pick(kinds), x, z, scale: rand(0.85, 1.3) });
     }
-    // dense mid band right behind the billboard
-    for (let i = 0; i < 8; i++) {
-      trees.push({ kind: pick(kinds), x: side * rand(7, 32), z: rand(-24, -3), scale: rand(0.85, 1.35) });
+    // a line continuing further out along the road, into the depth of view
+    // rather than stopping right behind the panel
+    for (let i = 0; i < 6; i++) {
+      trees.push({ kind: pick(kinds), x: side * rand(20, 46), z: rand(-20, -1), scale: rand(0.75, 1.2) });
     }
     // sparser far band for depth
-    for (let i = 0; i < 6; i++) {
-      trees.push({ kind: pick(kinds), x: side * rand(6, 40), z: rand(-46, -26), scale: rand(0.55, 0.95) });
+    for (let i = 0; i < 5; i++) {
+      trees.push({ kind: pick(kinds), x: side * rand(6, 42), z: rand(-46, -26), scale: rand(0.55, 0.95) });
     }
-    // rocks and bushes tucked along the roadside grass
+    // rocks and bushes tucked along the roadside grass, clear of the billboard
     for (let i = 0; i < 4; i++) {
-      rocks.push({ x: side * rand(3, 15), z: rand(-9, -1), scale: rand(0.32, 0.62) });
+      const { x, z } = clearing(() => ({ x: side * rand(9, 30), z: rand(-14, -1) }));
+      rocks.push({ x, z, scale: rand(0.32, 0.62) });
     }
     for (let i = 0; i < 3; i++) {
-      const z = rng() < 0.5 ? rand(-8, -1) : rand(15.5, 19);
-      bushes.push({ x: side * rand(5.5, 14), z, scale: rand(0.7, 1.15) });
+      const { x, z } = clearing(() => ({ x: side * rand(9, 20), z: rand(-9, -1) }));
+      bushes.push({ x, z, scale: rand(0.7, 1.15) });
     }
-    // grass tufts scattered everywhere but on the asphalt
-    for (let i = 0; i < 14; i++) {
-      const z = rng() < 0.5 ? rand(-22, -1) : rand(15, 20);
-      grass.push({ x: side * rand(1, 34), z, scale: rand(0.7, 1.3) });
+    // grass tufts scattered through the same depth the trees occupy, but
+    // never on the asphalt or right against the billboard's own posts
+    for (let i = 0; i < 16; i++) {
+      const { x, z } = clearing(() => ({ x: side * rand(9, 40), z: rand(-24, -1) }));
+      grass.push({ x, z, scale: rand(0.7, 1.3) });
     }
   }
 
   return {
     camera: {
-      x: -9,
-      y: POLE_H * 1.05,
-      z: PANEL_W * 1.85,
-      lookX: 2,
-      lookY: POLE_H + PANEL_H * 0.32,
+      x: -5.5,
+      y: POLE_H * 0.78,
+      z: PANEL_W * 1.8,
+      lookX: 1.3,
+      lookY: POLE_H + PANEL_H * 0.34,
       lookZ: 0,
-      fov: 42,
+      fov: 40,
     },
     trees,
     rocks,
     bushes,
     grass,
-    poles: [{ x: 8.5, z: 15, scale: 1.15 }],
+    poles: [{ x: 22, z: -5, scale: 1.15 }],
     clouds: [
       { x: -48, y: 30, z: -50, scale: 3.2 },
       { x: 44, y: 34, z: -60, scale: 3.8 },
@@ -523,7 +545,7 @@ export default function OgBillboardScene({
           gl.toneMappingExposure = 0.9;
         }}
       >
-        <fog attach="fog" args={[PAL.fog, 60, 260]} />
+        <fog attach="fog" args={[PAL.fog, 140, 480]} />
         <SkyDome />
         <Lights />
         <Terrain />
