@@ -11,6 +11,7 @@ import { useVisits } from "@/lib/useVisits";
 import { sceneAudio } from "@/lib/audio";
 import { perfEnabled } from "@/lib/perfState";
 import { debugEnabled, debugState } from "@/lib/debugState";
+import { textColorFor } from "@/lib/color";
 import { useRebuild } from "./useRebuild";
 import PerfPanel from "./PerfPanel";
 
@@ -522,25 +523,34 @@ export default function Overlay() {
             </p>
           )}
           {preview.state === "ready" &&
-            (preview.info.resolved || preview.info.icon ? (
-              <div className="peek peek--card" style={{ background: preview.info.color }}>
-                <span className="peek__tile">
-                  {preview.info.icon ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={preview.info.icon} alt="" width={34} height={34} />
-                  ) : (
-                    <b style={{ color: preview.info.color }}>
-                      {preview.info.domain.charAt(0).toUpperCase()}
-                    </b>
-                  )}
-                </span>
-                <span className="peek__text">
-                  <b>{preview.info.domain}</b>
-                  <em>{preview.info.description ?? preview.info.title ?? "your ad, but bigger"}</em>
-                </span>
-                <span className="peek__note">your billboard</span>
-              </div>
-            ) : (
+            (preview.info.resolved || preview.info.icon ? (() => {
+              const ink = textColorFor(preview.info.color);
+              const inkFaint = ink === "#ffffff" ? "rgba(255,255,255,0.82)" : "rgba(31,39,51,0.68)";
+              const inkNote = ink === "#ffffff" ? "rgba(255,255,255,0.75)" : "rgba(31,39,51,0.62)";
+              return (
+                <div className="peek peek--card" style={{ background: preview.info.color, color: ink }}>
+                  <span className="peek__tile">
+                    {preview.info.icon ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={preview.info.icon} alt="" width={34} height={34} />
+                    ) : (
+                      <b style={{ color: preview.info.color }}>
+                        {preview.info.domain.charAt(0).toUpperCase()}
+                      </b>
+                    )}
+                  </span>
+                  <span className="peek__text">
+                    <b>{preview.info.domain}</b>
+                    <em style={{ color: inkFaint }}>
+                      {preview.info.description ?? preview.info.title ?? "your ad, but bigger"}
+                    </em>
+                  </span>
+                  <span className="peek__note" style={{ color: inkNote }}>
+                    your billboard
+                  </span>
+                </div>
+              );
+            })() : (
               <p className="peek peek--muted">
                 couldn&apos;t reach {preview.info.domain} — check the domain.
               </p>
