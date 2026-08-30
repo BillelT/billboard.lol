@@ -365,13 +365,13 @@ function buildDefaultScene(): SceneConfig {
 
   return {
     camera: {
-      x: -12,
-      y: 8.5,
-      z: PANEL_W + 8.5,
-      lookX: 0.25,
-      lookY: 6.7,    
+      x: -8,
+      y: 9,
+      z: PANEL_W + 0,
+      lookX: -0.5,
+      lookY: 7.7,    
       lookZ: 0,
-      fov: 42,
+      fov: 57,
     },
     fog: { near: 0, far: 215 },
     trees,
