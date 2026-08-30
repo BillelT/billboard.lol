@@ -22,7 +22,7 @@ const SITE_URL =
 // OG_RENDER_VERSION whenever the scene/composition changes so a deploy
 // invalidates the cache for the current leader too, instead of waiting for
 // the podium to change.
-const OG_RENDER_VERSION = "v2";
+const OG_RENDER_VERSION = "v3";
 const renderLeaderOg = unstable_cache(async (leaderId: string): Promise<string | null> => {
   const ranking = await getRanking();
   const leader = ranking.find((b) => b.id === leaderId);
