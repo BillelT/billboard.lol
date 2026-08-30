@@ -11,7 +11,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 // robots.txt only asks well-behaved crawlers to skip this page — it doesn't
 // stop a person from just visiting the URL, and this page is also the debug
 // scene builder (?debug=1), so it must not be publicly browsable in
-// production. opengraph-image.tsx (the only legitimate caller in prod) signs
+// production. app/api/og/route.ts (the only legitimate caller in prod) signs
 // its request with this same secret via the `key` param.
 function isAuthorized(params: Record<string, string | undefined>): boolean {
   if (process.env.NODE_ENV !== "production") return true;

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 // Dev-only manual trigger for the real OG screenshot pipeline: renders
 // /og-render with whatever query params you pass through the same headless
-// Chromium path opengraph-image.tsx uses, but for any hand-built scene and
+// Chromium path app/api/og/route.ts uses, but for any hand-built scene and
 // with none of that route's per-leader caching. Lets the debug panel (and
 // `curl localhost:3000/api/og-preview?...`) get an actual PNG on demand.
 // Not for production: it launches a full browser per request, unauthenticated.

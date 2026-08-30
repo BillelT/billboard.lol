@@ -21,6 +21,12 @@ export const revalidate = 30;
 // request and let the canonical/og:url reflect it, so re-sharing the link
 // with a new value (e.g. bid-board.lol/?refresh=2) actually reaches Twitter
 // as a URL it hasn't cached before.
+//
+// The image itself needs the same treatment, separately: og:image always
+// pointed at the one unchanging "/opengraph-image" URL, so even once X
+// re-scraped the HTML above it would still reuse whatever bytes it had
+// already cached for that image URL. /api/og is now versioned by leader id
+// + amount, so a new leader or a new price is an image URL X has never seen.
 export async function generateMetadata({
   searchParams,
 }: {
@@ -36,15 +42,23 @@ export async function generateMetadata({
 
   const ranking = await getRanking();
   const leader = [...ranking].sort((a, b) => b.amount - a.amount)[0];
-  if (!leader) return { alternates: { canonical: url }, openGraph: { url } };
+  const image = {
+    url: `/api/og?v=${leader ? `${leader.id}-${leader.amount}` : "empty"}`,
+    width: 1200,
+    height: 630,
+    alt: "The current bidboard.lol podium",
+  };
+  if (!leader) {
+    return { alternates: { canonical: url }, openGraph: { url, images: [image] }, twitter: { images: [image] } };
+  }
   const title = `Currently #1: ${leader.name} — bidboard.lol`;
   const description = `${leader.name} paid ${fmtUSD(leader.amount)} for the biggest billboard on the highway. Take the top spot for ${fmtUSD(leader.amount + 1)}.`;
   return {
     title,
     description,
     alternates: { canonical: url },
-    openGraph: { title, description, type: "website", url },
-    twitter: { card: "summary_large_image", title, description },
+    openGraph: { title, description, type: "website", url, images: [image] },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
   };
 }
 
