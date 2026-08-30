@@ -38,7 +38,7 @@ export interface OgBillboardData {
   claimedAt?: string | null;
 }
 
-const PANEL_H = 8.8;
+const PANEL_H = 8.0;
 export const PANEL_W = PANEL_H * 1.9;
 const POLE_H = 1.8 + PANEL_H * 0.36;
 
