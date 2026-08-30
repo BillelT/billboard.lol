@@ -51,9 +51,9 @@ export default function Clouds({ layout }: { layout: SceneLayout }) {
       let y: number, z: number;
       if (x > layout.endX + 20) {
         // Past the last billboard there's nothing to clear, so let clouds hang
-        // low — what the end-of-road view actually flies past — but well off
-        // to the side of the road itself, not hovering right over it.
-        z = lerp(-230, -70, rng());
+        // low — what the end-of-road view actually flies past — split evenly
+        // between both sides of the road rather than hovering right over it.
+        z = rng() < 0.5 ? lerp(-100, -40, rng()) : lerp(40, 100, rng());
         y = lerp(12, 58, rng());
       } else {
         const behind = rng() < 0.65;
