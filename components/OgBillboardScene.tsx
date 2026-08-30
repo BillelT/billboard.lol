@@ -199,15 +199,26 @@ function Terrain() {
   );
 }
 
+// One geometry per tree *kind*, one for rocks, one for bushes — shared
+// across every instance via the mesh's own position/scale, instead of a
+// fresh BufferGeometry per decor item (was ~190+ duplicate geometries for
+// only 5 distinct shapes).
 function Decor({ scene }: { scene: SceneConfig }) {
-  const trees = useMemo(() => scene.trees.map((t) => ({ ...t, geometry: makeTreeGeometry(t.kind) })), [scene.trees]);
-  useEffect(() => () => trees.forEach((t) => t.geometry.dispose()), [trees]);
+  const treeGeometries = useMemo(
+    () => ({
+      round: makeTreeGeometry("round"),
+      tall: makeTreeGeometry("tall"),
+      pine: makeTreeGeometry("pine"),
+    }),
+    [],
+  );
+  useEffect(() => () => Object.values(treeGeometries).forEach((g) => g.dispose()), [treeGeometries]);
 
-  const rocks = useMemo(() => scene.rocks.map((r) => ({ ...r, geometry: makeRockGeometry() })), [scene.rocks]);
-  useEffect(() => () => rocks.forEach((r) => r.geometry.dispose()), [rocks]);
+  const rockGeometry = useMemo(() => makeRockGeometry(), []);
+  useEffect(() => () => rockGeometry.dispose(), [rockGeometry]);
 
-  const bushes = useMemo(() => scene.bushes.map((b) => ({ ...b, geometry: makeBushGeometry() })), [scene.bushes]);
-  useEffect(() => () => bushes.forEach((b) => b.geometry.dispose()), [bushes]);
+  const bushGeometry = useMemo(() => makeBushGeometry(), []);
+  useEffect(() => () => bushGeometry.dispose(), [bushGeometry]);
 
   const grassGeometry = useMemo(() => makeGrassTuftGeometry(), []);
   useEffect(() => () => grassGeometry.dispose(), [grassGeometry]);
@@ -232,14 +243,14 @@ function Decor({ scene }: { scene: SceneConfig }) {
 
   return (
     <>
-      {trees.map((t, i) => (
-        <mesh key={`tree-${i}`} geometry={t.geometry} material={vertexColorMat} position={[t.x, terrainHeight(t.x, t.z), t.z]} scale={t.scale} castShadow receiveShadow />
+      {scene.trees.map((t, i) => (
+        <mesh key={`tree-${i}`} geometry={treeGeometries[t.kind]} material={vertexColorMat} position={[t.x, terrainHeight(t.x, t.z), t.z]} scale={t.scale} castShadow receiveShadow />
       ))}
-      {rocks.map((r, i) => (
-        <mesh key={`rock-${i}`} geometry={r.geometry} material={vertexColorMat} position={[r.x, terrainHeight(r.x, r.z), r.z]} scale={r.scale} receiveShadow />
+      {scene.rocks.map((r, i) => (
+        <mesh key={`rock-${i}`} geometry={rockGeometry} material={vertexColorMat} position={[r.x, terrainHeight(r.x, r.z), r.z]} scale={r.scale} receiveShadow />
       ))}
-      {bushes.map((b, i) => (
-        <mesh key={`bush-${i}`} geometry={b.geometry} material={vertexColorMat} position={[b.x, terrainHeight(b.x, b.z), b.z]} scale={b.scale} castShadow receiveShadow />
+      {scene.bushes.map((b, i) => (
+        <mesh key={`bush-${i}`} geometry={bushGeometry} material={vertexColorMat} position={[b.x, terrainHeight(b.x, b.z), b.z]} scale={b.scale} castShadow receiveShadow />
       ))}
       {scene.grass.map((g, i) => (
         <mesh key={`grass-${i}`} geometry={grassGeometry} material={vertexColorMat} position={[g.x, terrainHeight(g.x, g.z), g.z]} scale={g.scale} />
@@ -429,15 +440,15 @@ function buildDefaultScene(): SceneConfig {
     grass,
     poles: [{ x: 25, z: 0, scale: 1.15 }, { x: 52, z: -5, scale: 1.10 }],
     
-    // Positioned in this camera's own view frustum (not the old frontal
-    // camera's) — same scattered, varied-scale layout, just aimed so the
-    // clouds actually land above the billboard instead of off-frame.
+    // Positioned in this camera's own view frustum (x:9.5,y:10,z:17,
+    // lookX:-7,lookY:7.5,fov:55) — one small/low over the road on the left,
+    // one bigger and higher center-left, one above the billboard's lights,
+    // one large one out toward the right edge.
     clouds: [
-      { x: -17.8, y: 21.8, z: -6.9, scale: 2.2 },
-      { x: -12.1, y: 25.2, z: -25.9, scale: 3.0 },
-      { x: -3.2, y: 26.2, z: -54.1, scale: 4.0 },
-      { x: -30.3, y: 15.5, z: -42.0, scale: 3.5 },
-      { x: 5.9, y: 20.1, z: -68.1, scale: 4.5 },
+      { x: -23.4, y: 12.3, z: 6.6, scale: 1.8 },
+      { x: -24.6, y: 22.7, z: -14.9, scale: 3.2 },
+      { x: -8.2, y: 16.8, z: -20.1, scale: 2.6 },
+      { x: 7.6, y: 18.5, z: -59.4, scale: 4.0 },
     ],
   };
 }
