@@ -367,13 +367,13 @@ function buildDefaultScene(): SceneConfig {
     camera: {
       // Shifted to the billboard's right, looking back across an empty
       // stretch of decor on the left — that's where the OG UI overlay sits.
-      x: 5,
-      y: 12.5,
-      z: 27,
-      lookX: -8.5,
+      x: 4,
+      y: 13,
+      z: 33,
+      lookX: -8,
       lookY: 9,
       lookZ: 0,
-      fov: 40,
+      fov: 36,
     },
     fog: { near: 0, far: 215 },
     trees,
@@ -512,18 +512,18 @@ function OgOverlay() {
         bidboard<em style={{ fontStyle: "normal", color: "var(--ink-3)" }}>.lol</em>
       </div>
 
-      <div style={{ position: "relative", padding: "0 40px 64px", maxWidth: 620 }}>
+      <div style={{ position: "relative", padding: "0 40px 64px", maxWidth: 560 }}>
         <h1
           style={{
             margin: 0,
-            fontSize: 58,
+            fontSize: 44,
             fontWeight: 700,
             lineHeight: 1.05,
             letterSpacing: "-0.03em",
             color: "var(--ink)",
           }}
         >
-          The biggest billboard money can buy.
+          Get the biggest billboard for your brand.
         </h1>
         <p
           style={{
@@ -534,7 +534,7 @@ function OgOverlay() {
             color: "var(--ink-2)",
           }}
         >
-          Bid for a spot on the highway. Pay more, get bigger, get seen first.
+          Advertise on a digital 3D highway seen by thousands every day.
         </p>
       </div>
     </div>
