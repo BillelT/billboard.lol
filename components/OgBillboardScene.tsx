@@ -19,8 +19,7 @@ import { vertexColorMat } from "./materials";
 import SkyDome from "./SkyDome";
 import Lights from "./Lights";
 
-// Couleur personnalisée pour un brouillard plus bleu/naturel et moins "blanc brûlé"
-const CUSTOM_SKY_FOG = "#8abde6";
+const CUSTOM_SKY_FOG = "#baf5fd";
 
 export interface OgBillboardData {
   name: string;
@@ -37,60 +36,17 @@ const PANEL_H = 7.4;
 export const PANEL_W = PANEL_H * 1.9;
 const POLE_H = 1.8 + PANEL_H * 0.36;
 
-export const ROAD_Z = 8;
+export const ROAD_Z = 13;
 export const ROAD_HALF_W = 6;
 
-export interface TreeItem {
-  kind: "round" | "tall" | "pine";
-  x: number;
-  z: number;
-  scale: number;
-}
-export interface RockItem {
-  x: number;
-  z: number;
-  scale: number;
-}
-export interface BushItem {
-  x: number;
-  z: number;
-  scale: number;
-}
-export interface GrassItem {
-  x: number;
-  z: number;
-  scale: number;
-}
-export interface PoleItem {
-  x: number;
-  z: number;
-  scale: number;
-}
-export interface CloudItem {
-  x: number;
-  y: number;
-  z: number;
-  scale: number;
-}
-export interface HillItem {
-  x: number;
-  z: number;
-  sx: number;
-  sy: number;
-}
-export interface CameraConfig {
-  x: number;
-  y: number;
-  z: number;
-  lookX: number;
-  lookY: number;
-  lookZ: number;
-  fov: number;
-}
-export interface FogConfig {
-  near: number;
-  far: number;
-}
+export interface TreeItem { kind: "round" | "tall" | "pine"; x: number; z: number; scale: number; }
+export interface RockItem { x: number; z: number; scale: number; }
+export interface BushItem { x: number; z: number; scale: number; }
+export interface GrassItem { x: number; z: number; scale: number; }
+export interface PoleItem { x: number; z: number; scale: number; }
+export interface CloudItem { x: number; y: number; z: number; scale: number; }
+export interface CameraConfig { x: number; y: number; z: number; lookX: number; lookY: number; lookZ: number; fov: number; }
+export interface FogConfig { near: number; far: number; }
 export interface SceneConfig {
   camera: CameraConfig;
   fog: FogConfig;
@@ -100,7 +56,6 @@ export interface SceneConfig {
   grass: GrassItem[];
   poles: PoleItem[];
   clouds: CloudItem[];
-  hills: HillItem[];
 }
 
 function Billboard({ data, icon }: { data: OgBillboardData; icon: HTMLImageElement | null }) {
@@ -239,10 +194,7 @@ function Terrain() {
 }
 
 function Decor({ scene }: { scene: SceneConfig }) {
-  const trees = useMemo(
-    () => scene.trees.map((t) => ({ ...t, geometry: makeTreeGeometry(t.kind) })),
-    [scene.trees],
-  );
+  const trees = useMemo(() => scene.trees.map((t) => ({ ...t, geometry: makeTreeGeometry(t.kind) })), [scene.trees]);
   useEffect(() => () => trees.forEach((t) => t.geometry.dispose()), [trees]);
 
   const rocks = useMemo(() => scene.rocks.map((r) => ({ ...r, geometry: makeRockGeometry() })), [scene.rocks]);
@@ -254,79 +206,37 @@ function Decor({ scene }: { scene: SceneConfig }) {
   const grassGeometry = useMemo(() => makeGrassTuftGeometry(), []);
   useEffect(() => () => grassGeometry.dispose(), [grassGeometry]);
 
-  const poles = useMemo(
-    () => scene.poles.map((p) => ({ ...p, pole: makePowerPoleGeometry(), wire: makePowerWireGeometry(13) })),
-    [scene.poles],
-  );
-  useEffect(
-    () => () =>
-      poles.forEach((p) => {
-        p.pole.dispose();
-        p.wire.dispose();
-      }),
-    [poles],
-  );
+  const poles = useMemo(() => scene.poles.map((p) => ({ ...p, pole: makePowerPoleGeometry(), wire: makePowerWireGeometry(13) })), [scene.poles]);
+  useEffect(() => () => poles.forEach((p) => { p.pole.dispose(); p.wire.dispose(); }), [poles]);
 
   const cloudGeometry = useMemo(() => makeCloudGeometry(), []);
   useEffect(() => () => cloudGeometry.dispose(), [cloudGeometry]);
   const cloudMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: "#ffffff", // Rendu des nuages un peu plus clair
-        emissive: "#e6f5ff",
-        emissiveIntensity: 0.2,
-        roughness: 0.8,
+        color: "#ffffff",
+        emissive: "#ffffff",
+        emissiveIntensity: 0.1,
+        roughness: 0.9,
         fog: true,
       }),
     [],
   );
   useEffect(() => () => cloudMaterial.dispose(), [cloudMaterial]);
 
-  // Teinte bleutée pour fusionner organiquement les collines dans le ciel
-  const hillColor = useMemo(() => new THREE.Color(PAL.grass).lerp(new THREE.Color(CUSTOM_SKY_FOG), 0.35), []);
-
   return (
     <>
       {trees.map((t, i) => (
-        <mesh
-          key={`tree-${i}`}
-          geometry={t.geometry}
-          material={vertexColorMat}
-          position={[t.x, terrainHeight(t.x, t.z), t.z]}
-          scale={t.scale}
-          castShadow
-          receiveShadow
-        />
+        <mesh key={`tree-${i}`} geometry={t.geometry} material={vertexColorMat} position={[t.x, terrainHeight(t.x, t.z), t.z]} scale={t.scale} castShadow receiveShadow />
       ))}
       {rocks.map((r, i) => (
-        <mesh
-          key={`rock-${i}`}
-          geometry={r.geometry}
-          material={vertexColorMat}
-          position={[r.x, terrainHeight(r.x, r.z), r.z]}
-          scale={r.scale}
-          receiveShadow
-        />
+        <mesh key={`rock-${i}`} geometry={r.geometry} material={vertexColorMat} position={[r.x, terrainHeight(r.x, r.z), r.z]} scale={r.scale} receiveShadow />
       ))}
       {bushes.map((b, i) => (
-        <mesh
-          key={`bush-${i}`}
-          geometry={b.geometry}
-          material={vertexColorMat}
-          position={[b.x, terrainHeight(b.x, b.z), b.z]}
-          scale={b.scale}
-          castShadow
-          receiveShadow
-        />
+        <mesh key={`bush-${i}`} geometry={b.geometry} material={vertexColorMat} position={[b.x, terrainHeight(b.x, b.z), b.z]} scale={b.scale} castShadow receiveShadow />
       ))}
       {scene.grass.map((g, i) => (
-        <mesh
-          key={`grass-${i}`}
-          geometry={grassGeometry}
-          material={vertexColorMat}
-          position={[g.x, terrainHeight(g.x, g.z), g.z]}
-          scale={g.scale}
-        />
+        <mesh key={`grass-${i}`} geometry={grassGeometry} material={vertexColorMat} position={[g.x, terrainHeight(g.x, g.z), g.z]} scale={g.scale} />
       ))}
       {poles.map((p, i) => (
         <group key={`pole-${i}`} position={[p.x, terrainHeight(p.x, p.z), p.z]} scale={p.scale}>
@@ -336,12 +246,6 @@ function Decor({ scene }: { scene: SceneConfig }) {
       ))}
       {scene.clouds.map((c, i) => (
         <mesh key={`cloud-${i}`} geometry={cloudGeometry} material={cloudMaterial} position={[c.x, c.y, c.z]} scale={c.scale} />
-      ))}
-      {scene.hills.map((h, i) => (
-        <mesh key={`hill-${i}`} position={[h.x, -h.sy * 0.55, h.z]} scale={[h.sx, h.sy, h.sx]}>
-          <sphereGeometry args={[1, 12, 8]} />
-          <meshStandardMaterial color={hillColor} roughness={1} />
-        </mesh>
       ))}
     </>
   );
@@ -386,24 +290,23 @@ function mulberry32(seed: number) {
   };
 }
 
-const BILLBOARD_CLEAR_X = 10;
-const BILLBOARD_CLEAR_Z: [number, number] = [-5.5, 5.5];
+const BILLBOARD_CLEAR_X = 8.5;
+const BILLBOARD_CLEAR_Z: [number, number] = [-3, 4];
 function clearsBillboard(x: number, z: number): boolean {
   return Math.abs(x) > BILLBOARD_CLEAR_X || z < BILLBOARD_CLEAR_Z[0] || z > BILLBOARD_CLEAR_Z[1];
 }
 
-const CLEAR_ZONE_FAR_Z = -25;
+const CLEAR_ZONE_FAR_Z = -75;
 
 function buildDefaultScene(): SceneConfig {
-  // Changement de la graine (seed) pour briser l'alignement peu naturel des buissons
-  const rng = mulberry32(98765432); 
+  const rng = mulberry32(11223344); 
   const rand = (a: number, b: number) => a + rng() * (b - a);
   const kinds: TreeItem["kind"][] = ["round", "tall", "pine"];
   const pick = <T,>(arr: T[]): T => arr[Math.floor(rng() * arr.length)];
   const clearing = (gen: () => { x: number; z: number }) => {
     let p = gen();
     let tries = 0;
-    while (!clearsBillboard(p.x, p.z) && tries < 8) {
+    while (!clearsBillboard(p.x, p.z) && tries < 10) {
       p = gen();
       tries++;
     }
@@ -415,90 +318,69 @@ function buildDefaultScene(): SceneConfig {
   const bushes: BushItem[] = [];
   const grass: GrassItem[] = [];
 
-  for (const side of [-1, 1] as const) {
-    for (let i = 0; i < 11; i++) {
-      const { x, z } = clearing(() => ({ x: side * rand(9, 27), z: rand(CLEAR_ZONE_FAR_Z + 3, -2) }));
-      trees.push({ kind: pick(kinds), x, z, scale: rand(0.85, 1.3) });
-    }
-    for (let i = 0; i < 9; i++) {
-      trees.push({
-        kind: pick(kinds),
-        x: side * rand(20, 46),
-        z: rand(CLEAR_ZONE_FAR_Z + 3, -1),
-        scale: rand(0.75, 1.2),
-      });
-    }
-    
-    // Si on est à droite (side === 1), on rajoute BEAUCOUP plus de décors
-    // pour remplir l'espace lors du mouvement de la caméra
-    if (side === 1) {
-      for (let i = 0; i < 15; i++) {
-        trees.push({
-          kind: pick(kinds),
-          x: rand(30, 80),
-          z: rand(CLEAR_ZONE_FAR_Z, 5),
-          scale: rand(0.7, 1.3),
-        });
-      }
-      for (let i = 0; i < 8; i++) {
-        const { x, z } = clearing(() => ({ x: rand(15, 60), z: rand(-20, 2) }));
-        bushes.push({ x, z, scale: rand(0.7, 1.2) });
-      }
-      for (let i = 0; i < 8; i++) {
-        const { x, z } = clearing(() => ({ x: rand(15, 70), z: rand(-25, 0) }));
-        rocks.push({ x, z, scale: rand(0.4, 0.8) });
-      }
-    }
+  // GAUCHE : Densification organique du premier plan/plan intermédiaire
+  for (let i = 0; i < 28; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-45, -9), z: rand(-30, 2) }));
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.85, 1.3) });
+  }
 
-    for (let i = 0; i < 5; i++) {
-      const { x, z } = clearing(() => ({ x: side * rand(9, 30), z: rand(-16, -1) }));
-      rocks.push({ x, z, scale: rand(0.32, 0.62) });
-    }
-    for (let i = 0; i < 4; i++) {
-      const { x, z } = clearing(() => ({ x: side * rand(9, 20), z: rand(-9, -1) }));
-      bushes.push({ x, z, scale: rand(0.7, 1.15) });
-    }
-    for (let i = 0; i < 22; i++) {
-      const { x, z } = clearing(() => ({ x: side * rand(9, 50), z: rand(CLEAR_ZONE_FAR_Z + 3, -1) }));
-      grass.push({ x, z, scale: rand(0.7, 1.3) });
-    }
+  // DROITE (Proche) : On éloigne la limite de la route (z s'arrête à -4 au lieu de +5)
+  // pour éviter l'alignement rectiligne rouge
+  for (let i = 0; i < 18; i++) {
+    const { x, z } = clearing(() => ({ x: rand(10, 50), z: rand(-35, -4) }));
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.75, 1.25) });
+  }
+
+  // ARRIÈRE-PLAN : Forêt très dense couvrant tout l'horizon
+  for (let i = 0; i < 45; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-45, 95), z: rand(CLEAR_ZONE_FAR_Z, -15) }));
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.75, 1.3) });
+  }
+  
+  // ARRIÈRE-PLAN DROITE : Extrême densité pour combler le vide repéré en noir
+  for (let i = 0; i < 25; i++) {
+    const { x, z } = clearing(() => ({ x: rand(30, 95), z: rand(CLEAR_ZONE_FAR_Z, -25) }));
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.75, 1.3) });
+  }
+
+  // Buissons, rochers et herbes redistribués pour éviter l'effet "bord de route"
+  for (let i = 0; i < 35; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-45, 80), z: rand(-45, -2) }));
+    bushes.push({ x, z, scale: rand(0.7, 1.2) });
+  }
+  for (let i = 0; i < 25; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-45, 85), z: rand(-50, -2) }));
+    rocks.push({ x, z, scale: rand(0.4, 0.75) });
+  }
+  for (let i = 0; i < 70; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-50, 95), z: rand(-65, 4) }));
+    grass.push({ x, z, scale: rand(0.7, 1.3) });
   }
 
   return {
     camera: {
-      x: -10,
-      y: 8,
-      z: PANEL_W + 6,
-      lookX: 1.3,
-      lookY: 7,
+      x: -12,
+      y: 8.5,
+      z: PANEL_W + 12,
+      lookX: 0.5,
+      lookY: 6.5,    
       lookZ: 0,
       fov: 40,
     },
-    // Near et far plus étendus pour un brouillard diffus, fondu et sans superposition blanche
-    fog: { near: 60, far: 240 },
+    fog: { near: 0, far: 215 },
     trees,
     rocks,
     bushes,
     grass,
-    poles: [{ x: 22, z: -5, scale: 1.15 }, { x: 52, z: -5, scale: 1.10 }],
+    poles: [{ x: 25, z: 0, scale: 1.15 }, { x: 52, z: -5, scale: 1.10 }],
     
-    // Ajout de nombreux nuages dispersés
     clouds: [
-      { x: -48, y: 30, z: -50, scale: 3.2 },
-      { x: 44, y: 34, z: -60, scale: 3.8 },
-      { x: -60, y: 26, z: -70, scale: 2.8 },
-      { x: 15,  y: 28, z: -40, scale: 2.5 },
-      { x: -10, y: 38, z: -80, scale: 4.1 },
-      { x: 75,  y: 32, z: -65, scale: 3.5 },
-      { x: 30,  y: 40, z: -55, scale: 2.9 },
-    ],
-    
-    // Collines étendues vers la droite pour couvrir l'horizon
-    hills: [
-      { x: -40, z: -80, sx: 60, sy: 14 },
-      { x: 15, z: -90, sx: 75, sy: 16 },
-      { x: 70, z: -85, sx: 65, sy: 13 },
-      { x: 120, z: -75, sx: 70, sy: 15 },
+      { x: -35, y: 21, z: -40, scale: 3.0 },
+      { x: 12,  y: 26, z: -50, scale: 2.8 },
+      { x: 45,  y: 19, z: -60, scale: 4.2 },
+      { x: -15, y: 28, z: -80, scale: 4.5 },
+      { x: 75,  y: 22, z: -70, scale: 3.5 },
+      { x: -60, y: 19, z: -65, scale: 2.9 },
     ],
   };
 }
@@ -550,7 +432,6 @@ export default function OgBillboardScene({
           gl.toneMappingExposure = 0.9;
         }}
       >
-        {/* On remplace PAL.fog par CUSTOM_SKY_FOG pour un rendu plus naturel */}
         <fog attach="fog" args={[CUSTOM_SKY_FOG, scene.fog.near, scene.fog.far]} />
         <SkyDome />
         <Lights />
