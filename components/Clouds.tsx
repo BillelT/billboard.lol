@@ -18,7 +18,10 @@ export default function Clouds({ layout }: { layout: SceneLayout }) {
 
   const { mesh, base } = useMemo(() => {
     const rng = mulberry32(99);
-    const count = 16;
+    const span = layout.endX - layout.startX;
+    // Density scales with the road length so far-out billboards still get sky cover,
+    // without thickening the cluster the player already sees on arrival.
+    const count = Math.max(16, Math.round(span / 22));
     // self-lit white so undersides never pick up the green ground bounce
     const cloudMat = new THREE.MeshStandardMaterial({
       color: "#ffffff",
@@ -27,7 +30,6 @@ export default function Clouds({ layout }: { layout: SceneLayout }) {
       roughness: 1,
     });
     const mesh = new THREE.InstancedMesh(makeCloudGeometry(), cloudMat, count);
-    const span = layout.endX - layout.startX;
     // Clouds must never cross a billboard face: they either drift well behind
     // the billboard line, or fly high enough to clear the tallest panel.
     const CLEARANCE = 18;
@@ -37,7 +39,9 @@ export default function Clouds({ layout }: { layout: SceneLayout }) {
       const z = behind ? lerp(-260, BILL_Z - 45, rng()) : lerp(BILL_Z + 30, 60, rng());
       const floor = behind ? 30 : maxTop + CLEARANCE + s * 1.4;
       return {
-        x: lerp(layout.startX - 60, layout.startX + span * 0.85, Math.pow(rng(), 1.4)),
+        // Uniform spread across the whole road, with a little jitter so it
+        // doesn't read as a mechanical grid — organic, not bunched at either end.
+        x: lerp(layout.startX - 80, layout.endX + 80, rng()) + lerp(-15, 15, rng()),
         y: lerp(floor, floor + 34, rng()),
         z,
         s,
