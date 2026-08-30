@@ -302,20 +302,48 @@ function clearsBillboard(x: number, z: number): boolean {
   return Math.abs(x) > BILLBOARD_CLEAR_X || z < BILLBOARD_CLEAR_Z[0] || z > BILLBOARD_CLEAR_Z[1];
 }
 
-const CLEAR_ZONE_FAR_Z = -75;
+function onRoad(x: number, z: number): boolean {
+  return Math.abs(z - ROAD_Z) < ROAD_HALF_W + 1 && Math.abs(x) < 58;
+}
+
+// The OG camera's own forward/right unit vectors (derived from its fixed
+// x:9,y:10,z:18 / lookX:-7,lookY:7.5 config below). Decor is scattered in
+// these camera-relative coordinates — depth `d` along forward, lateral `a`
+// along right — instead of world x/z: a world-axis-aligned box doesn't
+// track this camera's skewed, angled frustum, so it either dumps decor
+// off-frame to the right or leaves the visible field bare. Sampling in
+// camera space keeps everything inside what's actually seen, while `d`
+// can run far out for a real, receding background.
+const CAM_ORIGIN_X = 9;
+const CAM_ORIGIN_Z = 18;
+const CAM_FORWARD = { x: -0.6607, z: -0.7434 };
+const CAM_RIGHT = { x: 0.7474, z: -0.6644 };
+function camPoint(d: number, a: number): { x: number; z: number } {
+  return {
+    x: CAM_ORIGIN_X + d * CAM_FORWARD.x + a * CAM_RIGHT.x,
+    z: CAM_ORIGIN_Z + d * CAM_FORWARD.z + a * CAM_RIGHT.z,
+  };
+}
 
 function buildDefaultScene(): SceneConfig {
-  const rng = mulberry32(11223344); 
+  const rng = mulberry32(11223344);
   const rand = (a: number, b: number) => a + rng() * (b - a);
   const kinds: TreeItem["kind"][] = ["round", "tall", "pine"];
   const pick = <T,>(arr: T[]): T => arr[Math.floor(rng() * arr.length)];
-  const clearing = (gen: () => { x: number; z: number }) => {
-    let p = gen();
+  const isFree = (x: number, z: number) => clearsBillboard(x, z) && !onRoad(x, z);
+  // Sample within the visible cone at depth `d` (distance along the
+  // camera's forward axis) with a lateral offset expressed as a fraction of
+  // the frustum's half-width at that depth — so the box always tracks what
+  // the camera can actually see, at any distance.
+  const clearing = (dMin: number, dMax: number, aFracMin: number, aFracMax: number) => {
+    let p = { x: 0, z: 0 };
     let tries = 0;
-    while (!clearsBillboard(p.x, p.z) && tries < 10) {
-      p = gen();
+    do {
+      const d = rand(dMin, dMax);
+      const a = d * rand(aFracMin, aFracMax);
+      p = camPoint(d, a);
       tries++;
-    }
+    } while (!isFree(p.x, p.z) && tries < 12);
     return p;
   };
 
@@ -324,102 +352,60 @@ function buildDefaultScene(): SceneConfig {
   const bushes: BushItem[] = [];
   const grass: GrassItem[] = [];
 
-  // GAUCHE : Densification organique du premier plan/plan intermédiaire
-  for (let i = 0; i < 28; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-45, -9), z: rand(-30, 2) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.85, 1.3) });
+  // Bande proche : sol de part et d'autre du billboard, juste après la route
+  for (let i = 0; i < 30; i++) {
+    const { x, z } = clearing(16, 34, -0.5, 0.95);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.8, 1.2) });
   }
-
-  // DROITE (Proche) : On éloigne la limite de la route (z s'arrête à -4 au lieu de +5)
-  // pour éviter l'alignement rectiligne rouge
-  for (let i = 0; i < 18; i++) {
-    const { x, z } = clearing(() => ({ x: rand(10, 50), z: rand(-35, -4) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.75, 1.25) });
-  }
-
-  // ARRIÈRE-PLAN : Forêt très dense couvrant tout l'horizon
-  for (let i = 0; i < 45; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-45, 95), z: rand(CLEAR_ZONE_FAR_Z, -15) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.75, 1.3) });
-  }
-  
-  // ARRIÈRE-PLAN DROITE : Extrême densité pour combler le vide repéré en noir
-  for (let i = 0; i < 25; i++) {
-    const { x, z } = clearing(() => ({ x: rand(30, 95), z: rand(CLEAR_ZONE_FAR_Z, -25) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.75, 1.3) });
-  }
-
-  // Buissons, rochers et herbes redistribués pour éviter l'effet "bord de route"
-  for (let i = 0; i < 35; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-45, 80), z: rand(-45, -2) }));
-    bushes.push({ x, z, scale: rand(0.7, 1.2) });
-  }
-  for (let i = 0; i < 25; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-45, 85), z: rand(-50, -2) }));
-    rocks.push({ x, z, scale: rand(0.4, 0.75) });
-  }
-  for (let i = 0; i < 70; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-50, 95), z: rand(-65, 4) }));
-    grass.push({ x, z, scale: rand(0.7, 1.3) });
-  }
-
-  // Le nouveau cadrage caméra (côté droit, grand angle) rend visible un plus
-  // grand champ — devant, derrière et à droite du billboard — qui restait
-  // hors cadre avec l'ancienne caméra frontale. On y disperse du décor sur
-  // plusieurs bandes de profondeur pour que ça reste organique (jamais un
-  // seul bloc dense) plutôt que concentré près du billboard.
-
-  // Bande proche, à gauche de la route
-  for (let i = 0; i < 14; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-36, -4), z: rand(-18, 3) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.75, 1.15) });
-  }
-  for (let i = 0; i < 7; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-36, -3), z: rand(-18, 3) }));
+  for (let i = 0; i < 16; i++) {
+    const { x, z } = clearing(16, 34, -0.5, 0.95);
     bushes.push({ x, z, scale: rand(0.6, 1.0) });
   }
-  for (let i = 0; i < 6; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-36, -3), z: rand(-19, 3) }));
+  for (let i = 0; i < 10; i++) {
+    const { x, z } = clearing(16, 34, -0.5, 0.95);
     rocks.push({ x, z, scale: rand(0.35, 0.65) });
   }
-  for (let i = 0; i < 16; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-38, -2), z: rand(-19, 4) }));
+  for (let i = 0; i < 30; i++) {
+    const { x, z } = clearing(16, 34, -0.5, 0.95);
     grass.push({ x, z, scale: rand(0.7, 1.2) });
   }
 
-  // Bande médiane, plus loin dans la profondeur — plus petite, plus clairsemée
-  for (let i = 0; i < 12; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-42, -6), z: rand(-36, -18) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.55, 0.9) });
+  // Bande médiane : profondeur intermédiaire, échelle un peu réduite
+  for (let i = 0; i < 28; i++) {
+    const { x, z } = clearing(34, 65, -0.45, 0.9);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.55, 0.95) });
   }
-  for (let i = 0; i < 6; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-42, -6), z: rand(-36, -18) }));
+  for (let i = 0; i < 12; i++) {
+    const { x, z } = clearing(34, 65, -0.45, 0.9);
     bushes.push({ x, z, scale: rand(0.5, 0.85) });
   }
-
-  // À droite / derrière le billboard : le champ que le nouvel angle révèle
-  // là aussi, resté vide jusqu'ici
-  for (let i = 0; i < 14; i++) {
-    const { x, z } = clearing(() => ({ x: rand(12, 46), z: rand(-26, -3) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.7, 1.1) });
+  for (let i = 0; i < 8; i++) {
+    const { x, z } = clearing(34, 65, -0.45, 0.9);
+    rocks.push({ x, z, scale: rand(0.3, 0.55) });
   }
-  for (let i = 0; i < 7; i++) {
-    const { x, z } = clearing(() => ({ x: rand(12, 46), z: rand(-26, -3) }));
-    bushes.push({ x, z, scale: rand(0.55, 0.95) });
-  }
-  for (let i = 0; i < 5; i++) {
-    const { x, z } = clearing(() => ({ x: rand(12, 46), z: rand(-27, -3) }));
-    rocks.push({ x, z, scale: rand(0.35, 0.6) });
-  }
-  for (let i = 0; i < 14; i++) {
-    const { x, z } = clearing(() => ({ x: rand(10, 48), z: rand(-27, 0) }));
-    grass.push({ x, z, scale: rand(0.7, 1.2) });
+  for (let i = 0; i < 20; i++) {
+    const { x, z } = clearing(34, 65, -0.45, 0.9);
+    grass.push({ x, z, scale: rand(0.6, 1.0) });
   }
 
-  // Arrière-plan central, entre la route et l'horizon — évite le vide "colline nue"
-  for (let i = 0; i < 16; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-22, 40), z: rand(-48, -28) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.5, 0.85) });
+  // Arrière-plan : comble le vide de colline nue vers l'horizon
+  for (let i = 0; i < 32; i++) {
+    const { x, z } = clearing(65, 120, -0.4, 0.85);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.35, 0.7) });
+  }
+  for (let i = 0; i < 10; i++) {
+    const { x, z } = clearing(65, 120, -0.4, 0.85);
+    bushes.push({ x, z, scale: rand(0.3, 0.55) });
+  }
+  for (let i = 0; i < 14; i++) {
+    const { x, z } = clearing(65, 120, -0.4, 0.85);
+    grass.push({ x, z, scale: rand(0.5, 0.85) });
+  }
+
+  // Très lointain : une forêt qui s'estompe dans la brume jusqu'à l'horizon
+  for (let i = 0; i < 24; i++) {
+    const { x, z } = clearing(120, 200, -0.35, 0.8);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.25, 0.45) });
   }
 
   return {
@@ -537,7 +523,7 @@ function OgOverlay() {
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(90deg, rgba(255,250,240,0.94) 0%, rgba(255,250,240,0.9) 16%, rgba(255,250,240,0.78) 25%, rgba(255,250,240,0.6) 32%, rgba(255,250,240,0.38) 38%, rgba(255,250,240,0.16) 43%, rgba(255,250,240,0) 47%)",
+            "linear-gradient(90deg, rgba(255,250,240,0.94) 0%, rgba(255,250,240,0.9) 20%, rgba(255,250,240,0.78) 29%, rgba(255,250,240,0.6) 36%, rgba(255,250,240,0.38) 42%, rgba(255,250,240,0.16) 47%, rgba(255,250,240,0) 51%)",
         }}
       />
 
@@ -553,7 +539,7 @@ function OgOverlay() {
           border: "1.5px solid var(--ink)",
           borderRadius: "10px",
           boxShadow: "3px 3px 0 var(--ink)",
-          fontSize: 18,
+          fontSize: 20,
           fontWeight: 700,
           letterSpacing: "-0.02em",
           color: "var(--ink)",
@@ -577,7 +563,7 @@ function OgOverlay() {
         <h1
           style={{
             margin: 0,
-            fontSize: 40,
+            fontSize: 42,
             fontWeight: 700,
             lineHeight: 1.08,
             letterSpacing: "-0.03em",
@@ -589,7 +575,7 @@ function OgOverlay() {
         <p
           style={{
             margin: "14px 0 0",
-            fontSize: 21,
+            fontSize: 23,
             fontWeight: 500,
             lineHeight: 1.4,
             color: "var(--ink-2)",
