@@ -43,17 +43,18 @@ export default function Clouds({ layout }: { layout: SceneLayout }) {
     // the billboard line, or fly high enough to clear the tallest panel.
     const CLEARANCE = 18;
     const base = Array.from({ length: count }, () => {
-      // Uniform spread across the whole road plus its head/tail margins, with a
-      // little jitter so it doesn't read as a mechanical grid — organic, not
-      // bunched at either end.
-      const x = lerp(layout.startX - HEAD, layout.endX + TAIL, rng()) + lerp(-15, 15, rng());
+      // Spread across the whole road plus its head/tail margins. Averaging two
+      // draws softens the scatter into loose, organic clumps instead of the
+      // evenly-spaced grid a single uniform draw plus fixed jitter produces.
+      const x = lerp(layout.startX - HEAD, layout.endX + TAIL, (rng() + rng()) / 2) + lerp(-25, 25, rng());
       const s = lerp(2.2, 5.5, rng());
       let y: number, z: number;
       if (x > layout.endX + 20) {
         // Past the last billboard there's nothing to clear, so let clouds hang
-        // low and near — what the end-of-road view actually flies past.
-        z = lerp(-90, 40, rng());
-        y = lerp(14, 42, rng());
+        // low — what the end-of-road view actually flies past — but well off
+        // to the side of the road itself, not hovering right over it.
+        z = lerp(-230, -70, rng());
+        y = lerp(12, 58, rng());
       } else {
         const behind = rng() < 0.65;
         z = behind ? lerp(-260, BILL_Z - 45, rng()) : lerp(BILL_Z + 30, 60, rng());
