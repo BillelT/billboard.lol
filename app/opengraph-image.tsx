@@ -18,7 +18,11 @@ const SITE_URL =
 // A real 3D screenshot of the current #1, not a flat CSS mock of one. Cached
 // by the leader's own id, so the (expensive, headless-browser) render only
 // happens again when a new company actually takes the top spot — never on a
-// timer, and never for a click/amount tick from the same leader.
+// timer, and never for a click/amount tick from the same leader. Bump
+// OG_RENDER_VERSION whenever the scene/composition changes so a deploy
+// invalidates the cache for the current leader too, instead of waiting for
+// the podium to change.
+const OG_RENDER_VERSION = "v2";
 const renderLeaderOg = unstable_cache(async (leaderId: string): Promise<string | null> => {
   const ranking = await getRanking();
   const leader = ranking.find((b) => b.id === leaderId);
@@ -37,7 +41,7 @@ const renderLeaderOg = unstable_cache(async (leaderId: string): Promise<string |
 
   const png = await renderPngScreenshot(`${SITE_URL}/og-render?${qs.toString()}`);
   return png.toString("base64");
-}, ["og-billboard-render"]);
+}, ["og-billboard-render", OG_RENDER_VERSION]);
 
 export default async function Image() {
   const ranking = await getRanking();
