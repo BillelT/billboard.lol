@@ -262,7 +262,14 @@ function Decor({ scene }: { scene: SceneConfig }) {
         </group>
       ))}
       {scene.clouds.map((c, i) => (
-        <mesh key={`cloud-${i}`} geometry={cloudGeometry} material={cloudMaterial} position={[c.x, c.y, c.z]} scale={c.scale} />
+        <mesh
+          key={`cloud-${i}`}
+          geometry={cloudGeometry}
+          material={cloudMaterial}
+          position={[c.x, c.y, c.z]}
+          rotation={[0, CLOUD_FACE_ROTATION_Y, 0]}
+          scale={c.scale}
+        />
       ))}
     </>
   );
@@ -335,6 +342,12 @@ function camPoint(d: number, a: number): { x: number; z: number } {
     z: CAM_ORIGIN_Z + d * CAM_FORWARD.z + a * CAM_RIGHT.z,
   };
 }
+
+// Cloud geometry is built elongated along its own local +X (see
+// makeCloudGeometry in lib/geometry.ts) — left un-rotated, the camera above
+// was seeing that shape edge-on. Yaw it so local +X lines up with the
+// camera's right vector instead, so every cloud presents its broad side.
+export const CLOUD_FACE_ROTATION_Y = Math.atan2(-CAM_RIGHT.z, CAM_RIGHT.x);
 
 function buildDefaultScene(): SceneConfig {
   const rng = mulberry32(11223344);
