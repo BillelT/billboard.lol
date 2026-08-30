@@ -363,24 +363,63 @@ function buildDefaultScene(): SceneConfig {
     grass.push({ x, z, scale: rand(0.7, 1.3) });
   }
 
-  // MI-CHAMP GAUCHE : le nouveau cadrage caméra (côté droit, grand angle)
-  // laisse un vide organique dans le champ visible à gauche — on le comble
-  // sans toucher au billboard ni à la route.
-  for (let i = 0; i < 20; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-38, -4), z: rand(-16, 3) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.7, 1.15) });
+  // Le nouveau cadrage caméra (côté droit, grand angle) rend visible un plus
+  // grand champ — devant, derrière et à droite du billboard — qui restait
+  // hors cadre avec l'ancienne caméra frontale. On y disperse du décor sur
+  // plusieurs bandes de profondeur pour que ça reste organique (jamais un
+  // seul bloc dense) plutôt que concentré près du billboard.
+
+  // Bande proche, à gauche de la route
+  for (let i = 0; i < 14; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-36, -4), z: rand(-18, 3) }));
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.75, 1.15) });
   }
-  for (let i = 0; i < 12; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-38, -3), z: rand(-16, 3) }));
+  for (let i = 0; i < 7; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-36, -3), z: rand(-18, 3) }));
     bushes.push({ x, z, scale: rand(0.6, 1.0) });
   }
-  for (let i = 0; i < 10; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-38, -3), z: rand(-18, 3) }));
+  for (let i = 0; i < 6; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-36, -3), z: rand(-19, 3) }));
     rocks.push({ x, z, scale: rand(0.35, 0.65) });
   }
-  for (let i = 0; i < 24; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-40, -2), z: rand(-18, 4) }));
+  for (let i = 0; i < 16; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-38, -2), z: rand(-19, 4) }));
     grass.push({ x, z, scale: rand(0.7, 1.2) });
+  }
+
+  // Bande médiane, plus loin dans la profondeur — plus petite, plus clairsemée
+  for (let i = 0; i < 12; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-42, -6), z: rand(-36, -18) }));
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.55, 0.9) });
+  }
+  for (let i = 0; i < 6; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-42, -6), z: rand(-36, -18) }));
+    bushes.push({ x, z, scale: rand(0.5, 0.85) });
+  }
+
+  // À droite / derrière le billboard : le champ que le nouvel angle révèle
+  // là aussi, resté vide jusqu'ici
+  for (let i = 0; i < 14; i++) {
+    const { x, z } = clearing(() => ({ x: rand(12, 46), z: rand(-26, -3) }));
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.7, 1.1) });
+  }
+  for (let i = 0; i < 7; i++) {
+    const { x, z } = clearing(() => ({ x: rand(12, 46), z: rand(-26, -3) }));
+    bushes.push({ x, z, scale: rand(0.55, 0.95) });
+  }
+  for (let i = 0; i < 5; i++) {
+    const { x, z } = clearing(() => ({ x: rand(12, 46), z: rand(-27, -3) }));
+    rocks.push({ x, z, scale: rand(0.35, 0.6) });
+  }
+  for (let i = 0; i < 14; i++) {
+    const { x, z } = clearing(() => ({ x: rand(10, 48), z: rand(-27, 0) }));
+    grass.push({ x, z, scale: rand(0.7, 1.2) });
+  }
+
+  // Arrière-plan central, entre la route et l'horizon — évite le vide "colline nue"
+  for (let i = 0; i < 16; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-22, 40), z: rand(-48, -28) }));
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.5, 0.85) });
   }
 
   return {
@@ -402,13 +441,15 @@ function buildDefaultScene(): SceneConfig {
     grass,
     poles: [{ x: 25, z: 0, scale: 1.15 }, { x: 52, z: -5, scale: 1.10 }],
     
+    // Positioned in this camera's own view frustum (not the old frontal
+    // camera's) — same scattered, varied-scale layout, just aimed so the
+    // clouds actually land above the billboard instead of off-frame.
     clouds: [
-      { x: 60, y: 21, z: -25, scale: 3.0 },
-      { x: 12,  y: 26, z: -50, scale: 2.8 },
-      { x: 41,  y: 21, z: -60, scale: 4.2 },
-      { x: -15, y: 19, z: -80, scale: 4.5 },
-      { x: 75,  y: 36.2, z: -67, scale: 4.5 },
-      { x: -28, y: 24, z: -65, scale: 2.0 },
+      { x: -17.8, y: 21.8, z: -6.9, scale: 2.2 },
+      { x: -12.1, y: 25.2, z: -25.9, scale: 3.0 },
+      { x: -3.2, y: 26.2, z: -54.1, scale: 4.0 },
+      { x: -30.3, y: 15.5, z: -42.0, scale: 3.5 },
+      { x: 5.9, y: 20.1, z: -68.1, scale: 4.5 },
     ],
   };
 }
@@ -496,7 +537,7 @@ function OgOverlay() {
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(90deg, rgba(255,250,240,0.94) 0%, rgba(255,250,240,0.9) 24%, rgba(255,250,240,0.7) 33%, rgba(255,250,240,0.36) 39%, rgba(255,250,240,0.1) 43%, rgba(255,250,240,0) 46%)",
+            "linear-gradient(90deg, rgba(255,250,240,0.94) 0%, rgba(255,250,240,0.9) 16%, rgba(255,250,240,0.78) 25%, rgba(255,250,240,0.6) 32%, rgba(255,250,240,0.38) 38%, rgba(255,250,240,0.16) 43%, rgba(255,250,240,0) 47%)",
         }}
       />
 
@@ -532,11 +573,11 @@ function OgOverlay() {
         bidboard<em style={{ fontStyle: "normal", color: "var(--ink-3)" }}>.lol</em>
       </div>
 
-      <div style={{ position: "relative", padding: "0 40px 56px", maxWidth: 500 }}>
+      <div style={{ position: "relative", padding: "0 40px 56px", maxWidth: 520 }}>
         <h1
           style={{
             margin: 0,
-            fontSize: 36,
+            fontSize: 40,
             fontWeight: 700,
             lineHeight: 1.08,
             letterSpacing: "-0.03em",
@@ -548,7 +589,7 @@ function OgOverlay() {
         <p
           style={{
             margin: "14px 0 0",
-            fontSize: 19,
+            fontSize: 21,
             fontWeight: 500,
             lineHeight: 1.4,
             color: "var(--ink-2)",
