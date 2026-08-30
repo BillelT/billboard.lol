@@ -21,32 +21,84 @@ const description =
 
 export const metadata: Metadata = {
   metadataBase: new URL(site),
-  title,
+  title: { default: title, template: "%s — bidboard.lol" },
   description,
+  applicationName: "bidboard.lol",
+  authors: [{ name: "Billel Tighidet", url: "https://x.com/billel_tighidet" }],
+  creator: "Billel Tighidet",
+  publisher: "bidboard.lol",
+  category: "advertising",
   alternates: { canonical: "/" },
-  robots: { index: true, follow: true },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
   openGraph: {
     title,
     description,
     url: "/",
     siteName: "bidboard.lol",
     type: "website",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
+    creator: "@billel_tighidet",
   },
+  formatDetection: { telephone: false, address: false, email: false },
 };
 
 export const viewport: Viewport = {
   themeColor: "#cfe8f8",
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${site}/#website`,
+      url: site,
+      name: "bidboard.lol",
+      description,
+      publisher: { "@id": `${site}/#organization` },
+    },
+    {
+      "@type": "Organization",
+      "@id": `${site}/#organization`,
+      name: "bidboard.lol",
+      url: site,
+      logo: `${site}/icon.png`,
+      founder: { "@type": "Person", name: "Billel Tighidet", sameAs: "https://x.com/billel_tighidet" },
+      sameAs: ["https://x.com/billel_tighidet"],
+    },
+    {
+      "@type": "Service",
+      "@id": `${site}/#service`,
+      name: "bidboard.lol billboard placement",
+      description:
+        "Paid ranking where companies bid for the biggest billboard on a low-poly American highway.",
+      provider: { "@id": `${site}/#organization` },
+      areaServed: "Worldwide",
+      offers: { "@type": "Offer", priceCurrency: "USD", availability: "https://schema.org/InStock" },
+    },
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={outfit.variable}>
-      <body>{children}</body>
+      <body>
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        {children}
+      </body>
     </html>
   );
 }
