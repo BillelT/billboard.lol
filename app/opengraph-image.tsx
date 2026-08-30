@@ -38,9 +38,20 @@ const renderLeaderOg = unstable_cache(async (leaderId: string): Promise<string |
   if (leader.category) qs.set("category", leader.category);
   if (leader.clickCount != null) qs.set("clicks", String(leader.clickCount));
   if (leader.claimedAt) qs.set("claimedAt", leader.claimedAt);
+  // /og-render is gated behind this same secret in production so it isn't
+  // publicly browsable — see app/og-render/page.tsx.
+  if (process.env.OG_RENDER_SECRET) qs.set("key", process.env.OG_RENDER_SECRET);
 
-  const png = await renderPngScreenshot(`${SITE_URL}/og-render?${qs.toString()}`);
-  return png.toString("base64");
+  try {
+    const png = await renderPngScreenshot(`${SITE_URL}/og-render?${qs.toString()}`);
+    return png.toString("base64");
+  } catch (err) {
+    // Falls back to the plain text card below rather than a broken/500 OG
+    // image — most likely cause in production is OG_RENDER_SECRET not being
+    // set, which makes /og-render 404 for this request too.
+    console.error("OG render failed", err);
+    return null;
+  }
 }, ["og-billboard-render", OG_RENDER_VERSION]);
 
 export default async function Image() {
