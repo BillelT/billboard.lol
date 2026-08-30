@@ -1,12 +1,12 @@
 // Closed palette — every 3D color in the scene comes from here (topfloor-like bright daylight).
 export const PAL = {
   // sky & atmosphere
-  skyTop: "#3f9bec",
-  skyHorizon: "#e8f5ff",
-  skyGround: "#d8ecdf",
-  fog: "#e6f3ff",
-  sun: "#fff3dd",
-  hemiSky: "#cfe6fa",
+  skyTop: "#525dee",
+  skyHorizon: "#79d5ff",
+  skyGround: "#54fab5",
+  fog: "#b9dafa",
+  sun: "#fae2b7",
+  hemiSky: "#add5f8",
   hemiGround: "#b8d9a2",
 
   // ground & road
