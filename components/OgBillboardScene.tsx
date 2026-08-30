@@ -367,13 +367,13 @@ function buildDefaultScene(): SceneConfig {
     camera: {
       // Shifted to the billboard's right, looking back across an empty
       // stretch of decor on the left — that's where the OG UI overlay sits.
-      x: 4,
-      y: 13,
-      z: 33,
-      lookX: -8,
-      lookY: 9,
+      x: 18,
+      y: 11,
+      z: 14,
+      lookX: -9,
+      lookY: 8.5,
       lookZ: 0,
-      fov: 36,
+      fov: 55,
     },
     fog: { near: 0, far: 215 },
     trees,
@@ -476,7 +476,7 @@ function OgOverlay() {
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(90deg, rgba(255,250,240,0.9) 0%, rgba(255,250,240,0.9) 38%, rgba(255,250,240,0.55) 52%, rgba(255,250,240,0) 68%)",
+            "linear-gradient(90deg, rgba(255,250,240,0.9) 0%, rgba(255,250,240,0.9) 30%, rgba(255,250,240,0) 45%)",
         }}
       />
 
