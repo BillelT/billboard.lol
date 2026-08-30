@@ -359,9 +359,9 @@ function buildDefaultScene(): SceneConfig {
 
   return {
     camera: {
-      x: -12,
+      x: -10.5,
       y: 8.5,
-      z: PANEL_W + 12,
+      z: PANEL_W + 10.5,
       lookX: 0.5,
       lookY: 6.5,    
       lookZ: 0,
@@ -378,9 +378,9 @@ function buildDefaultScene(): SceneConfig {
       { x: 60, y: 21, z: -25, scale: 3.0 },
       { x: 12,  y: 26, z: -50, scale: 2.8 },
       { x: 41,  y: 21, z: -60, scale: 4.2 },
-      { x: -15, y: 28, z: -80, scale: 4.5 },
+      { x: -15, y: 19, z: -80, scale: 4.5 },
       { x: 75,  y: 36.2, z: -67, scale: 4.5 },
-      { x: -30, y: 18, z: -65, scale: 2.0 },
+      { x: -28, y: 24, z: -65, scale: 2.0 },
     ],
   };
 }
