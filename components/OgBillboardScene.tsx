@@ -525,7 +525,7 @@ function OgOverlay() {
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(90deg, rgba(255,250,240,0.94) 0%, rgba(255,250,240,0.9) 20%, rgba(255,250,240,0.78) 29%, rgba(255,250,240,0.6) 36%, rgba(255,250,240,0.38) 42%, rgba(255,250,240,0.16) 47%, rgba(255,250,240,0) 51%)",
+            "linear-gradient(90deg, rgba(255,250,240,0.99) 0%, rgba(255,250,240,0.92) 20%, rgba(255,250,240,0.71) 34%, rgba(255,250,240,0.52) 40%, rgba(255,250,240,0.37) 45%, rgba(255,250,240,0.12) 51%, rgba(255,250,240,0) 57%)",
         }}
       />
 
@@ -561,13 +561,13 @@ function OgOverlay() {
         bidboard<em style={{ fontStyle: "normal", color: "var(--ink-3)" }}>.lol</em>
       </div>
 
-      <div style={{ position: "relative", padding: "0 40px 56px", maxWidth: 520 }}>
+      <div style={{ position: "relative", padding: "0 40px 56px", maxWidth: 560 }}>
         <h1
           style={{
             margin: 0,
-            fontSize: 42,
+            fontSize: 44,
             fontWeight: 700,
-            lineHeight: 1.08,
+            lineHeight: 1,
             letterSpacing: "-0.03em",
             color: "var(--ink)",
           }}
@@ -577,9 +577,9 @@ function OgOverlay() {
         <p
           style={{
             margin: "14px 0 0",
-            fontSize: 23,
+            fontSize: 24,
             fontWeight: 500,
-            lineHeight: 1.4,
+            lineHeight: 1.2,
             color: "var(--ink-2)",
           }}
         >
