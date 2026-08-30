@@ -42,18 +42,22 @@ export default function Clouds({ layout }: { layout: SceneLayout }) {
     // Clouds must never cross a billboard face: they either drift well behind
     // the billboard line, or fly high enough to clear the tallest panel.
     const CLEARANCE = 18;
-    const base = Array.from({ length: count }, () => {
-      // Spread across the whole road plus its head/tail margins. Averaging two
-      // draws softens the scatter into loose, organic clumps instead of the
-      // evenly-spaced grid a single uniform draw plus fixed jitter produces.
-      const x = lerp(layout.startX - HEAD, layout.endX + TAIL, (rng() + rng()) / 2) + lerp(-25, 25, rng());
+    // One cloud per equal-width cell, jittered inside it: even coverage end to
+    // end (a plain uniform draw can luck into gaps, and averaging two draws —
+    // tried earlier — piles everything toward the middle of the range), while
+    // the per-cell jitter still keeps it from reading as a mechanical grid.
+    const totalSpan = layout.endX + TAIL - (layout.startX - HEAD);
+    const cellW = totalSpan / count;
+    const base = Array.from({ length: count }, (_, i) => {
+      const cellStart = layout.startX - HEAD + i * cellW;
+      const x = cellStart + rng() * cellW;
       const s = lerp(2.2, 5.5, rng());
       let y: number, z: number;
       if (x > layout.endX + 20) {
         // Past the last billboard there's nothing to clear, so let clouds hang
         // low — what the end-of-road view actually flies past — split evenly
         // between both sides of the road rather than hovering right over it.
-        z = rng() < 0.5 ? lerp(-100, -40, rng()) : lerp(40, 100, rng());
+        z = rng() < 0.5 ? lerp(-100, -40, rng()) : lerp(20, 80, rng());
         y = lerp(12, 58, rng());
       } else {
         const behind = rng() < 0.65;
