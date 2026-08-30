@@ -18,8 +18,8 @@ export interface DebugField {
 export const debugState = {
   fog: {
     mode: "linear" as "linear" | "exp2",
-    near: 30, // where haze starts, relative to the subject
-    far: 620, // where it tops out — larger is softer, more gradual
+    near: 0, // where haze starts, relative to the subject
+    far: 1500, // where it tops out — larger is softer, more gradual
     density: 0.0015, // exp2 only
     color: "#e6f3ff",
   },
