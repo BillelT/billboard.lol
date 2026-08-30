@@ -38,7 +38,7 @@ export interface OgBillboardData {
   claimedAt?: string | null;
 }
 
-const PANEL_H = 7.8;
+const PANEL_H = 8.3;
 export const PANEL_W = PANEL_H * 1.9;
 const POLE_H = 1.8 + PANEL_H * 0.36;
 
@@ -365,13 +365,13 @@ function buildDefaultScene(): SceneConfig {
 
   return {
     camera: {
-      x: -10.5,
+      x: -12,
       y: 8.5,
-      z: PANEL_W + 10.5,
-      lookX: 0.5,
+      z: PANEL_W + 8.5,
+      lookX: 0.25,
       lookY: 6.7,    
       lookZ: 0,
-      fov: 41,
+      fov: 42,
     },
     fog: { near: 0, far: 215 },
     trees,
