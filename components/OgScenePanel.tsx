@@ -1,13 +1,18 @@
 "use client";
 import { useRef, useState } from "react";
 import type { OgBillboardData } from "./OgBillboardScene";
-import { DEFAULT_SCENE_CONFIG, type CameraConfig, type SceneConfig } from "./OgBillboardScene";
+import { DEFAULT_SCENE_CONFIG, type CameraConfig, type FogConfig, type SceneConfig } from "./OgBillboardScene";
 import OgSceneMap from "./OgSceneMap";
 
 const CAMERA_FIELDS: { key: keyof CameraConfig; label: string; min: number; max: number; step: number }[] = [
   { key: "y", label: "height", min: 0, max: 30, step: 0.25 },
   { key: "lookY", label: "look height", min: 0, max: 30, step: 0.25 },
   { key: "fov", label: "fov", min: 20, max: 90, step: 1 },
+];
+
+const FOG_FIELDS: { key: keyof FogConfig; label: string; min: number; max: number; step: number }[] = [
+  { key: "near", label: "starts at", min: 20, max: 300, step: 5 },
+  { key: "far", label: "opaque at", min: 60, max: 600, step: 5 },
 ];
 
 function encodeScene(scene: SceneConfig): string {
@@ -43,6 +48,10 @@ export default function OgScenePanel({
 
   const setCamera = (key: keyof CameraConfig, value: number) => {
     onSceneChange({ ...scene, camera: { ...scene.camera, [key]: value } });
+  };
+
+  const setFog = (key: keyof FogConfig, value: number) => {
+    onSceneChange({ ...scene, fog: { ...scene.fog, [key]: value } });
   };
 
   const dataQuery = () => {
@@ -190,6 +199,24 @@ export default function OgScenePanel({
                   onChange={(e) => setCamera(f.key, Number(e.target.value))}
                 />
                 <b>{scene.camera[f.key].toFixed(1)}</b>
+              </label>
+            ))}
+          </section>
+
+          <section>
+            <h4>Fog</h4>
+            {FOG_FIELDS.map((f) => (
+              <label key={f.key} className="dbg-row">
+                <span>{f.label}</span>
+                <input
+                  type="range"
+                  min={f.min}
+                  max={f.max}
+                  step={f.step}
+                  value={scene.fog[f.key]}
+                  onChange={(e) => setFog(f.key, Number(e.target.value))}
+                />
+                <b>{scene.fog[f.key]}</b>
               </label>
             ))}
           </section>

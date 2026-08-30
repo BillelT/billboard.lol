@@ -89,8 +89,13 @@ export interface CameraConfig {
   lookZ: number;
   fov: number;
 }
+export interface FogConfig {
+  near: number;
+  far: number;
+}
 export interface SceneConfig {
   camera: CameraConfig;
+  fog: FogConfig;
   trees: TreeItem[];
   rocks: RockItem[];
   bushes: BushItem[];
@@ -293,7 +298,10 @@ function Decor({ scene }: { scene: SceneConfig }) {
   );
   useEffect(() => () => cloudMaterial.dispose(), [cloudMaterial]);
 
-  const hillColor = useMemo(() => new THREE.Color(PAL.grass).lerp(new THREE.Color(PAL.fog), 0.45), []);
+  // A light base tint — real distance fog (see the scene's <fog>) does most
+  // of the work of dissolving these into the sky now that it actually spans
+  // their distance from the camera.
+  const hillColor = useMemo(() => new THREE.Color(PAL.grass).lerp(new THREE.Color(PAL.fog), 0.2), []);
 
   return (
     <>
@@ -407,17 +415,22 @@ function mulberry32(seed: number) {
 // Nothing low should spawn right against the billboard's own footprint —
 // that's where the crossbar and posts are, and a grass tuft or bush poking
 // out of them there reads as a modeling glitch, not scenery.
-const BILLBOARD_CLEAR_X = 8.5;
-const BILLBOARD_CLEAR_Z: [number, number] = [-4, 4];
+const BILLBOARD_CLEAR_X = 10;
+const BILLBOARD_CLEAR_Z: [number, number] = [-5.5, 5.5];
 function clearsBillboard(x: number, z: number): boolean {
   return Math.abs(x) > BILLBOARD_CLEAR_X || z < BILLBOARD_CLEAR_Z[0] || z > BILLBOARD_CLEAR_Z[1];
 }
+
+// Nothing discrete (a tree, a rock) gets placed out here — past this depth
+// it's the fog's job to read as soft, hazy background, not individual props
+// with a hard silhouette poking out of the haze.
+const CLEAR_ZONE_FAR_Z = -25;
 
 // A hand-tuned but organically-scattered default scene: tree lines running
 // both behind the billboard and out into the depth of the camera's actual
 // field of view alongside the road (not just mirrored directly behind it),
 // rocks/bushes/grass tucked along the roadside clear of the billboard's own
-// footprint, one utility pole, and soft background hills.
+// footprint, one utility pole, and soft hazy hills fading into real fog.
 function buildDefaultScene(): SceneConfig {
   const rng = mulberry32(20260830);
   const rand = (a: number, b: number) => a + rng() * (b - a);
@@ -440,22 +453,24 @@ function buildDefaultScene(): SceneConfig {
 
   for (const side of [-1, 1] as const) {
     // dense band right beside/behind the billboard, receding into the frame
-    for (let i = 0; i < 7; i++) {
-      const { x, z } = clearing(() => ({ x: side * rand(9, 26), z: rand(-22, -2) }));
+    for (let i = 0; i < 9; i++) {
+      const { x, z } = clearing(() => ({ x: side * rand(9, 27), z: rand(CLEAR_ZONE_FAR_Z + 3, -2) }));
       trees.push({ kind: pick(kinds), x, z, scale: rand(0.85, 1.3) });
     }
     // a line continuing further out along the road, into the depth of view
-    // rather than stopping right behind the panel
-    for (let i = 0; i < 6; i++) {
-      trees.push({ kind: pick(kinds), x: side * rand(20, 46), z: rand(-20, -1), scale: rand(0.75, 1.2) });
-    }
-    // sparser far band for depth
-    for (let i = 0; i < 5; i++) {
-      trees.push({ kind: pick(kinds), x: side * rand(6, 42), z: rand(-46, -26), scale: rand(0.55, 0.95) });
+    // rather than stopping right behind the panel — still inside the clear
+    // zone, so nothing here needs the fog to explain it away
+    for (let i = 0; i < 7; i++) {
+      trees.push({
+        kind: pick(kinds),
+        x: side * rand(20, 46),
+        z: rand(CLEAR_ZONE_FAR_Z + 3, -1),
+        scale: rand(0.75, 1.2),
+      });
     }
     // rocks and bushes tucked along the roadside grass, clear of the billboard
     for (let i = 0; i < 4; i++) {
-      const { x, z } = clearing(() => ({ x: side * rand(9, 30), z: rand(-14, -1) }));
+      const { x, z } = clearing(() => ({ x: side * rand(9, 30), z: rand(-16, -1) }));
       rocks.push({ x, z, scale: rand(0.32, 0.62) });
     }
     for (let i = 0; i < 3; i++) {
@@ -464,22 +479,26 @@ function buildDefaultScene(): SceneConfig {
     }
     // grass tufts scattered through the same depth the trees occupy, but
     // never on the asphalt or right against the billboard's own posts
-    for (let i = 0; i < 16; i++) {
-      const { x, z } = clearing(() => ({ x: side * rand(9, 40), z: rand(-24, -1) }));
+    for (let i = 0; i < 18; i++) {
+      const { x, z } = clearing(() => ({ x: side * rand(9, 42), z: rand(CLEAR_ZONE_FAR_Z + 3, -1) }));
       grass.push({ x, z, scale: rand(0.7, 1.3) });
     }
   }
 
   return {
     camera: {
-      x: -5.5,
-      y: POLE_H * 0.78,
-      z: PANEL_W * 1.8,
+      x: -6,
+      y: 8,
+      z: PANEL_W * 1.85,
       lookX: 1.3,
-      lookY: POLE_H + PANEL_H * 0.34,
+      lookY: 7,
       lookZ: 0,
-      fov: 40,
+      fov: 42,
     },
+    // Near covers the whole clear zone (crisp: billboard, road, every tree/
+    // rock/bush above); by far the hills are fully dissolved into the sky —
+    // the only things ever inside that band are the hills themselves.
+    fog: { near: 85, far: 175 },
     trees,
     rocks,
     bushes,
@@ -545,7 +564,7 @@ export default function OgBillboardScene({
           gl.toneMappingExposure = 0.9;
         }}
       >
-        <fog attach="fog" args={[PAL.fog, 140, 480]} />
+        <fog attach="fog" args={[PAL.fog, scene.fog.near, scene.fog.far]} />
         <SkyDome />
         <Lights />
         <Terrain />
