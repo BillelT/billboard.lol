@@ -365,10 +365,10 @@ function buildDefaultScene(): SceneConfig {
 
   return {
     camera: {
-      x: -8,
+      x: -7.72,
       y: 9,
       z: PANEL_W + 0,
-      lookX: -0.5,
+      lookX: -0.57,
       lookY: 7.7,    
       lookZ: 0,
       fov: 57,
