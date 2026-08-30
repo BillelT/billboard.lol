@@ -1,29 +1,86 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { OgBillboardData } from "./OgBillboardScene";
+import {
+  DEFAULT_SCENE_CONFIG,
+  type CameraConfig,
+  type CloudItem,
+  type HillItem,
+  type RockItem,
+  type SceneConfig,
+  type TreeItem,
+} from "./OgBillboardScene";
 
-// Scene-builder panel for /og-render?debug=1 — lets you punch in any
-// billboard data and see the exact 3D OG render update live, then grab a
-// shareable URL or trigger a real screenshot through the same headless
-// pipeline production uses (see app/api/og-preview/route.ts).
+const CAMERA_FIELDS: { key: keyof CameraConfig; label: string; min: number; max: number; step: number }[] = [
+  { key: "x", label: "pos x", min: -60, max: 60, step: 0.5 },
+  { key: "y", label: "pos y", min: 0, max: 60, step: 0.5 },
+  { key: "z", label: "pos z", min: 5, max: 100, step: 0.5 },
+  { key: "lookX", label: "look x", min: -60, max: 60, step: 0.5 },
+  { key: "lookY", label: "look y", min: 0, max: 60, step: 0.5 },
+  { key: "lookZ", label: "look z", min: -60, max: 60, step: 0.5 },
+  { key: "fov", label: "fov", min: 20, max: 90, step: 1 },
+];
+
+function encodeScene(scene: SceneConfig): string {
+  return encodeURIComponent(JSON.stringify(scene));
+}
+
+// Scene-builder panel for /og-render?debug=1 — fully malleable 3D OG scene:
+// drag the panel anywhere, move the camera, and add/move/remove every tree,
+// rock, cloud and hill, on top of the existing billboard-content fields.
 export default function OgScenePanel({
   data,
-  onChange,
+  onDataChange,
+  scene,
+  onSceneChange,
 }: {
   data: OgBillboardData;
-  onChange: (next: OgBillboardData) => void;
+  onDataChange: (next: OgBillboardData) => void;
+  scene: SceneConfig;
+  onSceneChange: (next: SceneConfig) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [renderedUrl, setRenderedUrl] = useState<string | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
 
-  const set = <K extends keyof OgBillboardData>(key: K, value: OgBillboardData[K]) => {
-    onChange({ ...data, [key]: value });
+  const setData = <K extends keyof OgBillboardData>(key: K, value: OgBillboardData[K]) => {
+    onDataChange({ ...data, [key]: value });
   };
 
-  const queryString = () => {
+  const setCamera = (key: keyof CameraConfig, value: number) => {
+    onSceneChange({ ...scene, camera: { ...scene.camera, [key]: value } });
+  };
+
+  const updateTree = (i: number, patch: Partial<TreeItem>) => {
+    onSceneChange({ ...scene, trees: scene.trees.map((t, idx) => (idx === i ? { ...t, ...patch } : t)) });
+  };
+  const addTree = () => onSceneChange({ ...scene, trees: [...scene.trees, { kind: "round", x: 0, z: -20, scale: 1 }] });
+  const removeTree = (i: number) => onSceneChange({ ...scene, trees: scene.trees.filter((_, idx) => idx !== i) });
+
+  const updateRock = (i: number, patch: Partial<RockItem>) => {
+    onSceneChange({ ...scene, rocks: scene.rocks.map((r, idx) => (idx === i ? { ...r, ...patch } : r)) });
+  };
+  const addRock = () => onSceneChange({ ...scene, rocks: [...scene.rocks, { x: 0, z: 5, scale: 0.5 }] });
+  const removeRock = (i: number) => onSceneChange({ ...scene, rocks: scene.rocks.filter((_, idx) => idx !== i) });
+
+  const updateCloud = (i: number, patch: Partial<CloudItem>) => {
+    onSceneChange({ ...scene, clouds: scene.clouds.map((c, idx) => (idx === i ? { ...c, ...patch } : c)) });
+  };
+  const addCloud = () => onSceneChange({ ...scene, clouds: [...scene.clouds, { x: 0, y: 30, z: -60, scale: 3 }] });
+  const removeCloud = (i: number) => onSceneChange({ ...scene, clouds: scene.clouds.filter((_, idx) => idx !== i) });
+
+  const updateHill = (i: number, patch: Partial<HillItem>) => {
+    onSceneChange({ ...scene, hills: scene.hills.map((h, idx) => (idx === i ? { ...h, ...patch } : h)) });
+  };
+  const addHill = () => onSceneChange({ ...scene, hills: [...scene.hills, { x: 0, z: -80, sx: 60, sy: 13 }] });
+  const removeHill = (i: number) => onSceneChange({ ...scene, hills: scene.hills.filter((_, idx) => idx !== i) });
+
+  const dataQuery = () => {
     const qs = new URLSearchParams();
     qs.set("name", data.name);
     qs.set("color", data.color);
@@ -33,11 +90,12 @@ export default function OgScenePanel({
     if (data.category) qs.set("category", data.category);
     if (data.clickCount != null) qs.set("clicks", String(data.clickCount));
     if (data.claimedAt) qs.set("claimedAt", data.claimedAt);
+    qs.set("scene", encodeScene(scene));
     return qs;
   };
 
   const copyLink = async () => {
-    const url = `${window.location.origin}/og-render?${queryString().toString()}&debug=1`;
+    const url = `${window.location.origin}/og-render?${dataQuery().toString()}&debug=1`;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
@@ -47,7 +105,7 @@ export default function OgScenePanel({
     setRendering(true);
     setRenderError(null);
     try {
-      const res = await fetch(`/api/og-preview?${queryString().toString()}`);
+      const res = await fetch(`/api/og-preview?${dataQuery().toString()}`);
       if (!res.ok) throw new Error(await res.text());
       const blob = await res.blob();
       setRenderedUrl((prev) => {
@@ -61,9 +119,31 @@ export default function OgScenePanel({
     }
   };
 
+  const resetScene = () => onSceneChange(DEFAULT_SCENE_CONFIG);
+
+  const onHeadDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("button")) return;
+    const rect = panelRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    drag.current = { startX: e.clientX, startY: e.clientY, originX: rect.left, originY: rect.top };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onHeadMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag.current) return;
+    const { startX, startY, originX, originY } = drag.current;
+    setPos({ x: Math.max(0, originX + (e.clientX - startX)), y: Math.max(0, originY + (e.clientY - startY)) });
+  };
+  const onHeadUp = () => {
+    drag.current = null;
+  };
+
   return (
-    <div className={`dbg og-panel ${open ? "" : "dbg-collapsed"}`}>
-      <div className="dbg-head">
+    <div
+      ref={panelRef}
+      className={`dbg og-panel ${open ? "" : "dbg-collapsed"}`}
+      style={pos ? { left: pos.x, top: pos.y } : undefined}
+    >
+      <div className="dbg-head" onPointerDown={onHeadDown} onPointerMove={onHeadMove} onPointerUp={onHeadUp}>
         <button onClick={() => setOpen((o) => !o)}>{open ? "▾" : "▸"} og scene</button>
         {open && <button onClick={copyLink}>{copied ? "copied ✓" : "copy link"}</button>}
       </div>
@@ -74,34 +154,26 @@ export default function OgScenePanel({
             <h4>Billboard</h4>
             <label className="dbg-row">
               <span>name</span>
-              <input type="text" value={data.name} onChange={(e) => set("name", e.target.value)} />
+              <input type="text" value={data.name} onChange={(e) => setData("name", e.target.value)} />
             </label>
             <label className="dbg-row">
               <span>color</span>
-              <input type="color" value={data.color} onChange={(e) => set("color", e.target.value)} />
+              <input type="color" value={data.color} onChange={(e) => setData("color", e.target.value)} />
             </label>
             <label className="dbg-row">
               <span>amount</span>
-              <input
-                type="number"
-                value={data.amount}
-                onChange={(e) => set("amount", Number(e.target.value))}
-              />
+              <input type="number" value={data.amount} onChange={(e) => setData("amount", Number(e.target.value))} />
             </label>
             <label className="dbg-row">
               <span>title</span>
-              <input
-                type="text"
-                value={data.title ?? ""}
-                onChange={(e) => set("title", e.target.value || null)}
-              />
+              <input type="text" value={data.title ?? ""} onChange={(e) => setData("title", e.target.value || null)} />
             </label>
             <label className="dbg-row">
               <span>description</span>
               <input
                 type="text"
                 value={data.description ?? ""}
-                onChange={(e) => set("description", e.target.value || null)}
+                onChange={(e) => setData("description", e.target.value || null)}
               />
             </label>
             <label className="dbg-row">
@@ -109,7 +181,7 @@ export default function OgScenePanel({
               <input
                 type="text"
                 value={data.category ?? ""}
-                onChange={(e) => set("category", e.target.value || null)}
+                onChange={(e) => setData("category", e.target.value || null)}
               />
             </label>
             <label className="dbg-row">
@@ -117,7 +189,7 @@ export default function OgScenePanel({
               <input
                 type="number"
                 value={data.clickCount ?? ""}
-                onChange={(e) => set("clickCount", e.target.value === "" ? null : Number(e.target.value))}
+                onChange={(e) => setData("clickCount", e.target.value === "" ? null : Number(e.target.value))}
               />
             </label>
             <label className="dbg-row">
@@ -126,14 +198,132 @@ export default function OgScenePanel({
                 type="text"
                 placeholder="ISO date"
                 value={data.claimedAt ?? ""}
-                onChange={(e) => set("claimedAt", e.target.value || null)}
+                onChange={(e) => setData("claimedAt", e.target.value || null)}
               />
             </label>
           </section>
 
           <section>
+            <h4>Camera</h4>
+            {CAMERA_FIELDS.map((f) => (
+              <label key={f.key} className="dbg-row">
+                <span>{f.label}</span>
+                <input
+                  type="range"
+                  min={f.min}
+                  max={f.max}
+                  step={f.step}
+                  value={scene.camera[f.key]}
+                  onChange={(e) => setCamera(f.key, Number(e.target.value))}
+                />
+                <b>{scene.camera[f.key].toFixed(1)}</b>
+              </label>
+            ))}
+          </section>
+
+          <section>
+            <h4>Trees ({scene.trees.length})</h4>
+            {scene.trees.map((t, i) => (
+              <div key={i} className="og-item-row">
+                <select value={t.kind} onChange={(e) => updateTree(i, { kind: e.target.value as TreeItem["kind"] })}>
+                  <option value="round">round</option>
+                  <option value="tall">tall</option>
+                  <option value="pine">pine</option>
+                </select>
+                <input type="number" step={0.5} value={t.x} onChange={(e) => updateTree(i, { x: Number(e.target.value) })} title="x" />
+                <input type="number" step={0.5} value={t.z} onChange={(e) => updateTree(i, { z: Number(e.target.value) })} title="z" />
+                <input
+                  type="number"
+                  step={0.05}
+                  value={t.scale}
+                  onChange={(e) => updateTree(i, { scale: Number(e.target.value) })}
+                  title="scale"
+                />
+                <button onClick={() => removeTree(i)}>×</button>
+              </div>
+            ))}
+            <button onClick={addTree} style={{ width: "100%" }}>
+              + tree
+            </button>
+          </section>
+
+          <section>
+            <h4>Rocks ({scene.rocks.length})</h4>
+            {scene.rocks.map((r, i) => (
+              <div key={i} className="og-item-row og-item-row-3">
+                <input type="number" step={0.5} value={r.x} onChange={(e) => updateRock(i, { x: Number(e.target.value) })} title="x" />
+                <input type="number" step={0.5} value={r.z} onChange={(e) => updateRock(i, { z: Number(e.target.value) })} title="z" />
+                <input
+                  type="number"
+                  step={0.05}
+                  value={r.scale}
+                  onChange={(e) => updateRock(i, { scale: Number(e.target.value) })}
+                  title="scale"
+                />
+                <button onClick={() => removeRock(i)}>×</button>
+              </div>
+            ))}
+            <button onClick={addRock} style={{ width: "100%" }}>
+              + rock
+            </button>
+          </section>
+
+          <section>
+            <h4>Clouds ({scene.clouds.length})</h4>
+            {scene.clouds.map((c, i) => (
+              <div key={i} className="og-item-row og-item-row-4">
+                <input type="number" step={1} value={c.x} onChange={(e) => updateCloud(i, { x: Number(e.target.value) })} title="x" />
+                <input type="number" step={1} value={c.y} onChange={(e) => updateCloud(i, { y: Number(e.target.value) })} title="y" />
+                <input type="number" step={1} value={c.z} onChange={(e) => updateCloud(i, { z: Number(e.target.value) })} title="z" />
+                <input
+                  type="number"
+                  step={0.1}
+                  value={c.scale}
+                  onChange={(e) => updateCloud(i, { scale: Number(e.target.value) })}
+                  title="scale"
+                />
+                <button onClick={() => removeCloud(i)}>×</button>
+              </div>
+            ))}
+            <button onClick={addCloud} style={{ width: "100%" }}>
+              + cloud
+            </button>
+          </section>
+
+          <section>
+            <h4>Hills ({scene.hills.length})</h4>
+            {scene.hills.map((h, i) => (
+              <div key={i} className="og-item-row og-item-row-4">
+                <input type="number" step={1} value={h.x} onChange={(e) => updateHill(i, { x: Number(e.target.value) })} title="x" />
+                <input type="number" step={1} value={h.z} onChange={(e) => updateHill(i, { z: Number(e.target.value) })} title="z" />
+                <input
+                  type="number"
+                  step={1}
+                  value={h.sx}
+                  onChange={(e) => updateHill(i, { sx: Number(e.target.value) })}
+                  title="width"
+                />
+                <input
+                  type="number"
+                  step={0.5}
+                  value={h.sy}
+                  onChange={(e) => updateHill(i, { sy: Number(e.target.value) })}
+                  title="height"
+                />
+                <button onClick={() => removeHill(i)}>×</button>
+              </div>
+            ))}
+            <button onClick={addHill} style={{ width: "100%" }}>
+              + hill
+            </button>
+          </section>
+
+          <section>
             <h4>Render</h4>
-            <button onClick={renderPng} disabled={rendering} style={{ width: "100%" }}>
+            <button onClick={resetScene} style={{ width: "100%" }}>
+              reset scene to default
+            </button>
+            <button onClick={renderPng} disabled={rendering} style={{ width: "100%", marginTop: 6 }}>
               {rendering ? "rendering…" : "render PNG (real pipeline)"}
             </button>
             {renderError && <p className="og-panel-error">{renderError}</p>}

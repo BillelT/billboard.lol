@@ -973,9 +973,6 @@ body {
 .og-panel {
   width: 300px;
 }
-.og-panel .dbg-row {
-  grid-template-columns: 82px 1fr;
-}
 .og-panel .dbg-row input[type="text"],
 .og-panel .dbg-row input[type="number"] {
   font: inherit;
@@ -1000,6 +997,35 @@ body {
   width: 100%;
   margin-top: 8px;
   border-radius: 6px;
+}
+.og-item-row {
+  display: grid;
+  grid-template-columns: 1fr 44px 44px 44px 18px;
+  gap: 4px;
+  align-items: center;
+  padding: 2px 0;
+}
+.og-item-row-3 {
+  grid-template-columns: 1fr 1fr 1fr 18px;
+}
+.og-item-row-4 {
+  grid-template-columns: 1fr 1fr 1fr 1fr 18px;
+}
+.og-item-row input,
+.og-item-row select {
+  font: inherit;
+  width: 100%;
+  min-width: 0;
+  color: #e8f0f7;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 4px;
+  padding: 2px 3px;
+  font-size: 10px;
+}
+.og-item-row button {
+  padding: 2px 4px;
+  font-size: 11px;
 }
 
 /* ---------------- buy modal: clicking an empty slot in the scene ---------- */

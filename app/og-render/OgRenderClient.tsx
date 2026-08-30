@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import OgBillboardScene, { type OgBillboardData } from "@/components/OgBillboardScene";
+import OgBillboardScene, { DEFAULT_SCENE_CONFIG, type OgBillboardData, type SceneConfig } from "@/components/OgBillboardScene";
 import OgScenePanel from "@/components/OgScenePanel";
 
 function dataFromParams(params: Record<string, string | undefined>): OgBillboardData {
@@ -16,17 +16,37 @@ function dataFromParams(params: Record<string, string | undefined>): OgBillboard
   };
 }
 
-// ?debug=1 turns this into a scene builder: the OgScenePanel edits `data` in
-// place, so you can shape the exact billboard you want and see the real 3D
-// render update live, before ever generating a PNG.
+function sceneFromParams(params: Record<string, string | undefined>): SceneConfig {
+  if (!params.scene) return DEFAULT_SCENE_CONFIG;
+  try {
+    return { ...DEFAULT_SCENE_CONFIG, ...JSON.parse(decodeURIComponent(params.scene)) };
+  } catch {
+    return DEFAULT_SCENE_CONFIG;
+  }
+}
+
+// ?debug=1 turns this into a full scene builder: OgScenePanel edits `data`
+// (billboard content) and `scene` (camera + decor placement) in place, so
+// the whole render — not just the billboard's text — is malleable, live.
 export default function OgRenderClient({ params }: { params: Record<string, string | undefined> }) {
   const [data, setData] = useState<OgBillboardData>(() => dataFromParams(params));
+  const [scene, setScene] = useState<SceneConfig>(() => sceneFromParams(params));
   const debug = "debug" in params;
 
   return (
-    <>
-      <OgBillboardScene data={data} />
-      {debug && <OgScenePanel data={data} onChange={setData} />}
-    </>
+    <div
+      style={{
+        width: "100vw",
+        height: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#1b1f26",
+        overflow: "hidden",
+      }}
+    >
+      <OgBillboardScene data={data} scene={scene} />
+      {debug && <OgScenePanel data={data} onDataChange={setData} scene={scene} onSceneChange={setScene} />}
+    </div>
   );
 }
