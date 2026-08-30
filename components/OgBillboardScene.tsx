@@ -347,7 +347,7 @@ function camPoint(d: number, a: number): { x: number; z: number } {
 // makeCloudGeometry in lib/geometry.ts) — left un-rotated, the camera above
 // was seeing that shape edge-on. Yaw it so local +X lines up with the
 // camera's right vector instead, so every cloud presents its broad side.
-export const CLOUD_FACE_ROTATION_Y = Math.atan2(-CAM_RIGHT.z, CAM_RIGHT.x);
+export const CLOUD_FACE_ROTATION_Y = Math.atan2(-CAM_RIGHT.z + 0.7, CAM_RIGHT.x);
 
 function buildDefaultScene(): SceneConfig {
   const rng = mulberry32(11223344);
@@ -458,10 +458,10 @@ function buildDefaultScene(): SceneConfig {
     // one bigger and higher center-left, one above the billboard's lights,
     // one large one out toward the right edge.
     clouds: [
-      { x: -23.4, y: 12.3, z: 6.6, scale: 1.8 },
-      { x: -24.6, y: 22.7, z: -14.9, scale: 3.2 },
-      { x: -8.2, y: 16.8, z: -20.1, scale: 2.6 },
-      { x: 7.6, y: 18.5, z: -59.4, scale: 4.0 },
+      { x: -21.4, y: 16.3, z: 6.6, scale:1.8 },
+      { x: -24.6, y: 23.7, z: -14.9, scale: 3.2 },
+      { x: -10, y: 18.8, z: -28.1, scale: 2.6 },
+      { x: 13, y: 24, z: -59.4, scale: 4.0 },
     ],
   };
 }
