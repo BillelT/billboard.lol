@@ -19,7 +19,13 @@ import { vertexColorMat } from "./materials";
 import SkyDome from "./SkyDome";
 import Lights from "./Lights";
 
+// The OG card's own brighter, more saturated sky/fog — kept local to this
+// file (not lib/palette.ts) so it doesn't repaint the live site's sky and
+// fog for every visitor; see SkyDome's zenith/horizon/ground override props.
 const CUSTOM_SKY_FOG = "#baf5fd";
+const CUSTOM_SKY_ZENITH = "#525dee";
+const CUSTOM_SKY_HORIZON = "#79d5ff";
+const CUSTOM_SKY_GROUND = "#54fab5";
 
 export interface OgBillboardData {
   name: string;
@@ -433,7 +439,7 @@ export default function OgBillboardScene({
         }}
       >
         <fog attach="fog" args={[CUSTOM_SKY_FOG, scene.fog.near, scene.fog.far]} />
-        <SkyDome />
+        <SkyDome zenith={CUSTOM_SKY_ZENITH} horizon={CUSTOM_SKY_HORIZON} ground={CUSTOM_SKY_GROUND} />
         <Lights />
         <Terrain />
         <Decor scene={scene} />

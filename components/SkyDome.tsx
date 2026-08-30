@@ -35,7 +35,18 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
-export default function SkyDome() {
+// zenith/horizon/ground default to the shared palette — pass overrides for a
+// standalone scene (like the OG card) that wants its own sky without
+// changing the look of the live site for everyone else.
+export default function SkyDome({
+  zenith = PAL.skyTop,
+  horizon = PAL.skyHorizon,
+  ground = PAL.skyGround,
+}: {
+  zenith?: string;
+  horizon?: string;
+  ground?: string;
+} = {}) {
   const ref = useRef<THREE.Mesh>(null);
   const material = useMemo(
     () =>
@@ -43,9 +54,9 @@ export default function SkyDome() {
         vertexShader,
         fragmentShader,
         uniforms: {
-          uZenith: { value: new THREE.Color(PAL.skyTop) },
-          uHorizon: { value: new THREE.Color(PAL.skyHorizon) },
-          uGround: { value: new THREE.Color(PAL.skyGround) },
+          uZenith: { value: new THREE.Color(zenith) },
+          uHorizon: { value: new THREE.Color(horizon) },
+          uGround: { value: new THREE.Color(ground) },
           uSun: { value: new THREE.Color(PAL.sun) },
           uSunDir: { value: new THREE.Vector3(-0.35, 0.75, -0.55) },
         },
@@ -53,6 +64,7 @@ export default function SkyDome() {
         depthWrite: false,
         fog: false,
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
