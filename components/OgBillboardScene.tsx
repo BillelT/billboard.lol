@@ -365,13 +365,15 @@ function buildDefaultScene(): SceneConfig {
 
   return {
     camera: {
-      x: -7.72,
-      y: 9,
-      z: PANEL_W + 0,
-      lookX: -0.57,
-      lookY: 7.7,    
+      // Shifted to the billboard's right, looking back across an empty
+      // stretch of decor on the left — that's where the OG UI overlay sits.
+      x: 5,
+      y: 12.5,
+      z: 27,
+      lookX: -8.5,
+      lookY: 9,
       lookZ: 0,
-      fov: 57,
+      fov: 40,
     },
     fog: { near: 0, far: 215 },
     trees,
@@ -422,7 +424,7 @@ export default function OgBillboardScene({
   }, [data.name]);
 
   return (
-    <div style={{ width: 1200, height: 630, backgroundColor: "#5cb4f7" }}>
+    <div style={{ width: 1200, height: 630, backgroundColor: "#5cb4f7", position: "relative", overflow: "hidden" }}>
       <Canvas
         dpr={1}
         shadows="soft"
@@ -447,7 +449,94 @@ export default function OgBillboardScene({
         <CameraController config={scene.camera} />
         {iconSettled && <ReadySignal onReady={() => setReady(true)} />}
       </Canvas>
+      <OgOverlay />
       {ready && <div data-og-ready="true" style={{ position: "fixed", width: 0, height: 0 }} />}
+    </div>
+  );
+}
+
+// Warm --paper wash over the empty stretch of decor the camera now leaves on
+// the left, carrying the title/subtitle and the site's own wordmark — the
+// 3D render stops being just a screenshot of the billboard and becomes a card.
+function OgOverlay() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        pointerEvents: "none",
+        fontFamily: "var(--font)",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(90deg, rgba(255,250,240,0.9) 0%, rgba(255,250,240,0.9) 38%, rgba(255,250,240,0.55) 52%, rgba(255,250,240,0) 68%)",
+        }}
+      />
+
+      <div
+        style={{
+          position: "relative",
+          display: "inline-flex",
+          alignSelf: "flex-start",
+          alignItems: "center",
+          margin: "36px 0 0 40px",
+          padding: "9px 18px 9px 13px",
+          background: "var(--paper)",
+          border: "1.5px solid var(--ink)",
+          borderRadius: "10px",
+          boxShadow: "3px 3px 0 var(--ink)",
+          fontSize: 21,
+          fontWeight: 700,
+          letterSpacing: "-0.02em",
+          color: "var(--ink)",
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            width: 17,
+            height: 17,
+            marginRight: 10,
+            border: "1.5px solid var(--ink)",
+            borderRadius: 3,
+            background: "linear-gradient(#f2b632 55%, #ffffff 55%)",
+          }}
+        />
+        bidboard<em style={{ fontStyle: "normal", color: "var(--ink-3)" }}>.lol</em>
+      </div>
+
+      <div style={{ position: "relative", padding: "0 40px 64px", maxWidth: 620 }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 58,
+            fontWeight: 700,
+            lineHeight: 1.05,
+            letterSpacing: "-0.03em",
+            color: "var(--ink)",
+          }}
+        >
+          The biggest billboard money can buy.
+        </h1>
+        <p
+          style={{
+            margin: "16px 0 0",
+            fontSize: 23,
+            fontWeight: 500,
+            lineHeight: 1.35,
+            color: "var(--ink-2)",
+          }}
+        >
+          Bid for a spot on the highway. Pay more, get bigger, get seen first.
+        </p>
+      </div>
     </div>
   );
 }
