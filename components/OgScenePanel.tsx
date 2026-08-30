@@ -3,9 +3,12 @@ import { useRef, useState } from "react";
 import type { OgBillboardData } from "./OgBillboardScene";
 import {
   DEFAULT_SCENE_CONFIG,
+  type BushItem,
   type CameraConfig,
   type CloudItem,
+  type GrassItem,
   type HillItem,
+  type PoleItem,
   type RockItem,
   type SceneConfig,
   type TreeItem,
@@ -67,6 +70,24 @@ export default function OgScenePanel({
   };
   const addRock = () => onSceneChange({ ...scene, rocks: [...scene.rocks, { x: 0, z: 5, scale: 0.5 }] });
   const removeRock = (i: number) => onSceneChange({ ...scene, rocks: scene.rocks.filter((_, idx) => idx !== i) });
+
+  const updateBush = (i: number, patch: Partial<BushItem>) => {
+    onSceneChange({ ...scene, bushes: scene.bushes.map((b, idx) => (idx === i ? { ...b, ...patch } : b)) });
+  };
+  const addBush = () => onSceneChange({ ...scene, bushes: [...scene.bushes, { x: 0, z: 3, scale: 1 }] });
+  const removeBush = (i: number) => onSceneChange({ ...scene, bushes: scene.bushes.filter((_, idx) => idx !== i) });
+
+  const updateGrass = (i: number, patch: Partial<GrassItem>) => {
+    onSceneChange({ ...scene, grass: scene.grass.map((g, idx) => (idx === i ? { ...g, ...patch } : g)) });
+  };
+  const addGrass = () => onSceneChange({ ...scene, grass: [...scene.grass, { x: 0, z: -5, scale: 1 }] });
+  const removeGrass = (i: number) => onSceneChange({ ...scene, grass: scene.grass.filter((_, idx) => idx !== i) });
+
+  const updatePole = (i: number, patch: Partial<PoleItem>) => {
+    onSceneChange({ ...scene, poles: scene.poles.map((p, idx) => (idx === i ? { ...p, ...patch } : p)) });
+  };
+  const addPole = () => onSceneChange({ ...scene, poles: [...scene.poles, { x: 20, z: 16, scale: 1 }] });
+  const removePole = (i: number) => onSceneChange({ ...scene, poles: scene.poles.filter((_, idx) => idx !== i) });
 
   const updateCloud = (i: number, patch: Partial<CloudItem>) => {
     onSceneChange({ ...scene, clouds: scene.clouds.map((c, idx) => (idx === i ? { ...c, ...patch } : c)) });
@@ -265,6 +286,69 @@ export default function OgScenePanel({
             ))}
             <button onClick={addRock} style={{ width: "100%" }}>
               + rock
+            </button>
+          </section>
+
+          <section>
+            <h4>Bushes ({scene.bushes.length})</h4>
+            {scene.bushes.map((b, i) => (
+              <div key={i} className="og-item-row og-item-row-3">
+                <input type="number" step={0.5} value={b.x} onChange={(e) => updateBush(i, { x: Number(e.target.value) })} title="x" />
+                <input type="number" step={0.5} value={b.z} onChange={(e) => updateBush(i, { z: Number(e.target.value) })} title="z" />
+                <input
+                  type="number"
+                  step={0.05}
+                  value={b.scale}
+                  onChange={(e) => updateBush(i, { scale: Number(e.target.value) })}
+                  title="scale"
+                />
+                <button onClick={() => removeBush(i)}>×</button>
+              </div>
+            ))}
+            <button onClick={addBush} style={{ width: "100%" }}>
+              + bush
+            </button>
+          </section>
+
+          <section>
+            <h4>Grass tufts ({scene.grass.length})</h4>
+            {scene.grass.map((g, i) => (
+              <div key={i} className="og-item-row og-item-row-3">
+                <input type="number" step={0.5} value={g.x} onChange={(e) => updateGrass(i, { x: Number(e.target.value) })} title="x" />
+                <input type="number" step={0.5} value={g.z} onChange={(e) => updateGrass(i, { z: Number(e.target.value) })} title="z" />
+                <input
+                  type="number"
+                  step={0.05}
+                  value={g.scale}
+                  onChange={(e) => updateGrass(i, { scale: Number(e.target.value) })}
+                  title="scale"
+                />
+                <button onClick={() => removeGrass(i)}>×</button>
+              </div>
+            ))}
+            <button onClick={addGrass} style={{ width: "100%" }}>
+              + grass tuft
+            </button>
+          </section>
+
+          <section>
+            <h4>Poles ({scene.poles.length})</h4>
+            {scene.poles.map((p, i) => (
+              <div key={i} className="og-item-row og-item-row-3">
+                <input type="number" step={0.5} value={p.x} onChange={(e) => updatePole(i, { x: Number(e.target.value) })} title="x" />
+                <input type="number" step={0.5} value={p.z} onChange={(e) => updatePole(i, { z: Number(e.target.value) })} title="z" />
+                <input
+                  type="number"
+                  step={0.05}
+                  value={p.scale}
+                  onChange={(e) => updatePole(i, { scale: Number(e.target.value) })}
+                  title="scale"
+                />
+                <button onClick={() => removePole(i)}>×</button>
+              </div>
+            ))}
+            <button onClick={addPole} style={{ width: "100%" }}>
+              + pole
             </button>
           </section>
 

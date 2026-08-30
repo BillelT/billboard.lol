@@ -2,7 +2,16 @@
 import * as THREE from "three";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { makeBillboardGeometry, makeTreeGeometry, makeRockGeometry, makeCloudGeometry } from "@/lib/geometry";
+import {
+  makeBillboardGeometry,
+  makeTreeGeometry,
+  makeRockGeometry,
+  makeCloudGeometry,
+  makeBushGeometry,
+  makeGrassTuftGeometry,
+  makePowerPoleGeometry,
+  makePowerWireGeometry,
+} from "@/lib/geometry";
 import { FACE_RES, makeFaceTexture } from "@/lib/textures";
 import { iconSrc } from "@/lib/icons";
 import { PAL } from "@/lib/palette";
@@ -27,6 +36,12 @@ const PANEL_H = 7.4;
 const PANEL_W = PANEL_H * 1.9;
 const POLE_H = 1.8 + PANEL_H * 0.36;
 
+// The road (a straight strip along X, the same axis the billboard sits on,
+// echoing the live scene's highway) is centered on this Z and this wide —
+// everything else (decor zones, terrain flattening) is measured against it.
+const ROAD_Z = 8;
+const ROAD_HALF_W = 6;
+
 export interface TreeItem {
   kind: "round" | "tall" | "pine";
   x: number;
@@ -34,6 +49,21 @@ export interface TreeItem {
   scale: number;
 }
 export interface RockItem {
+  x: number;
+  z: number;
+  scale: number;
+}
+export interface BushItem {
+  x: number;
+  z: number;
+  scale: number;
+}
+export interface GrassItem {
+  x: number;
+  z: number;
+  scale: number;
+}
+export interface PoleItem {
   x: number;
   z: number;
   scale: number;
@@ -63,6 +93,9 @@ export interface SceneConfig {
   camera: CameraConfig;
   trees: TreeItem[];
   rocks: RockItem[];
+  bushes: BushItem[];
+  grass: GrassItem[];
+  poles: PoleItem[];
   clouds: CloudItem[];
   hills: HillItem[];
 }
@@ -103,32 +136,119 @@ function Billboard({ data, icon }: { data: OgBillboardData; icon: HTMLImageEleme
   );
 }
 
-// Flat grass plane + a short strip of asphalt — real geometry, just stripped
-// down to what one centered billboard needs. The live scene's own Ground/Road
-// are built around the whole ranking's layout and decor density, which don't
-// apply to a single standalone panel.
-//
-// The billboard's own footprint (panel + posts) sits around z -1..0.5 — the
-// road has to stay well clear of that band, further toward the camera, or
-// the billboard reads as standing in the middle of the road instead of on
-// the grass beside it.
-function SimpleGround() {
+// Gentle rolling relief, flattened to nothing across the road/billboard
+// corridor so nothing floats or sinks where props actually stand — the
+// same shape as the live scene's groundHeight(), just tuned down to a
+// subtle amount for a single hero shot instead of a mile of highway.
+function terrainHeight(x: number, z: number): number {
+  const distFromCorridor = Math.max(0, Math.abs(z - ROAD_Z + 1) - (ROAD_HALF_W + 3));
+  const taper = 1 - Math.exp(-((distFromCorridor / 11) ** 2));
+  const roll = Math.sin(x * 0.045 + z * 0.05) * 0.35 + Math.sin(x * 0.021 - z * 0.032) * 0.55;
+  return roll * taper;
+}
+
+function terrainTint(x: number, z: number): number {
+  return Math.sin(x * 0.05 + z * 0.06) * 0.5 + Math.sin(x * 0.011) * 0.5;
+}
+
+// Low-poly ground with real vertex relief (see terrainHeight) instead of a
+// flat plane, plus a two-lane road with painted shoulders and a dashed
+// center line — a scaled-down version of the live scene's Ground/Road.
+function Terrain() {
+  const geometry = useMemo(() => {
+    const width = 260;
+    const depth = 260;
+    const cols = 52;
+    const rows = 52;
+    const cz = -18; // ground patch centered a bit behind the road, toward the background decor
+
+    const positions = new Float32Array((cols + 1) * (rows + 1) * 3);
+    const colors = new Float32Array((cols + 1) * (rows + 1) * 3);
+    const grass = new THREE.Color(PAL.grass);
+    const light = new THREE.Color(PAL.grassLight);
+    const dark = new THREE.Color(PAL.grassDark);
+    const c = new THREE.Color();
+
+    let v = 0;
+    for (let r = 0; r <= rows; r++) {
+      const z = cz - depth / 2 + (depth * r) / rows;
+      for (let i = 0; i <= cols; i++) {
+        const x = -width / 2 + (width * i) / cols;
+        positions[v * 3] = x;
+        positions[v * 3 + 1] = terrainHeight(x, z);
+        positions[v * 3 + 2] = z;
+        const t = terrainTint(x, z);
+        c.copy(grass).lerp(t > 0 ? light : dark, Math.abs(t) * 0.6);
+        colors[v * 3] = c.r;
+        colors[v * 3 + 1] = c.g;
+        colors[v * 3 + 2] = c.b;
+        v++;
+      }
+    }
+
+    const stride = cols + 1;
+    const indices: number[] = [];
+    for (let r = 0; r < rows; r++) {
+      for (let i = 0; i < cols; i++) {
+        const a = r * stride + i;
+        const b = a + 1;
+        const d = (r + 1) * stride + i;
+        const e = d + 1;
+        indices.push(a, d, b, b, d, e);
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return geo;
+  }, []);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  const roadLen = 110;
+  const dashCount = Math.floor(roadLen / 6);
+
   return (
     <>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -6]} receiveShadow>
-        <planeGeometry args={[240, 240]} />
-        <meshStandardMaterial color={PAL.grass} roughness={1} metalness={0} />
+      <mesh geometry={geometry} receiveShadow>
+        <meshStandardMaterial vertexColors roughness={1} metalness={0} />
       </mesh>
-      <mesh position={[0, 0.02, 8]} receiveShadow>
-        <boxGeometry args={[90, 0.04, 12]} />
+
+      {/* asphalt */}
+      <mesh position={[0, 0.02, ROAD_Z]} receiveShadow>
+        <boxGeometry args={[roadLen, 0.04, ROAD_HALF_W * 2]} />
         <meshStandardMaterial color={PAL.road} roughness={1} metalness={0} />
       </mesh>
+      {/* shoulders */}
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[0, 0.012, ROAD_Z + s * (ROAD_HALF_W + 0.9)]} receiveShadow>
+          <boxGeometry args={[roadLen, 0.024, 1.8]} />
+          <meshStandardMaterial color={PAL.shoulder} roughness={1} metalness={0} />
+        </mesh>
+      ))}
+      {/* solid edge lines */}
+      {[-1, 1].map((s) => (
+        <mesh key={`edge-${s}`} position={[0, 0.045, ROAD_Z + s * (ROAD_HALF_W - 0.4)]}>
+          <boxGeometry args={[roadLen, 0.02, 0.16]} />
+          <meshBasicMaterial color={PAL.roadLine} toneMapped={false} />
+        </mesh>
+      ))}
+      {/* dashed center line */}
+      {Array.from({ length: dashCount }).map((_, i) => (
+        <mesh key={`dash-${i}`} position={[-roadLen / 2 + 3 + i * 6, 0.05, ROAD_Z]}>
+          <boxGeometry args={[2.6, 0.02, 0.22]} />
+          <meshBasicMaterial color={PAL.roadLine} toneMapped={false} />
+        </mesh>
+      ))}
     </>
   );
 }
 
-// The live scene's own low-poly trees/rocks/clouds/hills, placed from
-// `scene` instead of a fixed layout — fully editable from OgScenePanel.
+// The live scene's own low-poly trees/rocks/bushes/grass/poles/clouds/hills,
+// placed from `scene` instead of a fixed layout — fully editable from
+// OgScenePanel, organically scattered by default rather than gridded.
 function Decor({ scene }: { scene: SceneConfig }) {
   const trees = useMemo(
     () => scene.trees.map((t) => ({ ...t, geometry: makeTreeGeometry(t.kind) })),
@@ -138,6 +258,25 @@ function Decor({ scene }: { scene: SceneConfig }) {
 
   const rocks = useMemo(() => scene.rocks.map((r) => ({ ...r, geometry: makeRockGeometry() })), [scene.rocks]);
   useEffect(() => () => rocks.forEach((r) => r.geometry.dispose()), [rocks]);
+
+  const bushes = useMemo(() => scene.bushes.map((b) => ({ ...b, geometry: makeBushGeometry() })), [scene.bushes]);
+  useEffect(() => () => bushes.forEach((b) => b.geometry.dispose()), [bushes]);
+
+  const grassGeometry = useMemo(() => makeGrassTuftGeometry(), []);
+  useEffect(() => () => grassGeometry.dispose(), [grassGeometry]);
+
+  const poles = useMemo(
+    () => scene.poles.map((p) => ({ ...p, pole: makePowerPoleGeometry(), wire: makePowerWireGeometry(13) })),
+    [scene.poles],
+  );
+  useEffect(
+    () => () =>
+      poles.forEach((p) => {
+        p.pole.dispose();
+        p.wire.dispose();
+      }),
+    [poles],
+  );
 
   const cloudGeometry = useMemo(() => makeCloudGeometry(), []);
   useEffect(() => () => cloudGeometry.dispose(), [cloudGeometry]);
@@ -163,7 +302,7 @@ function Decor({ scene }: { scene: SceneConfig }) {
           key={`tree-${i}`}
           geometry={t.geometry}
           material={vertexColorMat}
-          position={[t.x, 0, t.z]}
+          position={[t.x, terrainHeight(t.x, t.z), t.z]}
           scale={t.scale}
           castShadow
           receiveShadow
@@ -174,10 +313,36 @@ function Decor({ scene }: { scene: SceneConfig }) {
           key={`rock-${i}`}
           geometry={r.geometry}
           material={vertexColorMat}
-          position={[r.x, 0, r.z]}
+          position={[r.x, terrainHeight(r.x, r.z), r.z]}
           scale={r.scale}
           receiveShadow
         />
+      ))}
+      {bushes.map((b, i) => (
+        <mesh
+          key={`bush-${i}`}
+          geometry={b.geometry}
+          material={vertexColorMat}
+          position={[b.x, terrainHeight(b.x, b.z), b.z]}
+          scale={b.scale}
+          castShadow
+          receiveShadow
+        />
+      ))}
+      {scene.grass.map((g, i) => (
+        <mesh
+          key={`grass-${i}`}
+          geometry={grassGeometry}
+          material={vertexColorMat}
+          position={[g.x, terrainHeight(g.x, g.z), g.z]}
+          scale={g.scale}
+        />
+      ))}
+      {poles.map((p, i) => (
+        <group key={`pole-${i}`} position={[p.x, terrainHeight(p.x, p.z), p.z]} scale={p.scale}>
+          <mesh geometry={p.pole} material={vertexColorMat} castShadow receiveShadow />
+          <mesh geometry={p.wire} material={vertexColorMat} />
+        </group>
       ))}
       {scene.clouds.map((c, i) => (
         <mesh key={`cloud-${i}`} geometry={cloudGeometry} material={cloudMaterial} position={[c.x, c.y, c.z]} scale={c.scale} />
@@ -226,61 +391,92 @@ function ReadySignal({ onReady }: { onReady: () => void }) {
   return null;
 }
 
-const DEFAULT_CAMERA: CameraConfig = {
-  x: 0,
-  y: POLE_H * 0.85,
-  z: PANEL_W * 1.35,
-  lookX: 0,
-  lookY: POLE_H + PANEL_H * 0.42,
-  lookZ: 0,
-  fov: 42,
-};
+// Deterministic PRNG (mulberry32) — the default decor layout below is
+// randomized but fixed, so the OG render stays identical across requests.
+function mulberry32(seed: number) {
+  let s = seed;
+  return () => {
+    s |= 0;
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
-const DEFAULT_TREES: TreeItem[] = [
-  { kind: "pine", x: -20, z: -14, scale: 1.25 },
-  { kind: "round", x: -14, z: -19, scale: 1.1 },
-  { kind: "tall", x: -23, z: -8, scale: 1.3 },
-  { kind: "pine", x: -27, z: -18, scale: 1.05 },
-  { kind: "round", x: -9, z: -24, scale: 0.95 },
-  { kind: "pine", x: -32, z: -26, scale: 1.15 },
-  { kind: "tall", x: -18, z: -28, scale: 1.2 },
-  { kind: "pine", x: 20, z: -15, scale: 1.2 },
-  { kind: "round", x: 14, z: -20, scale: 1.0 },
-  { kind: "tall", x: 24, z: -9, scale: 1.25 },
-  { kind: "pine", x: 28, z: -19, scale: 1.1 },
-  { kind: "round", x: 9, z: -25, scale: 0.9 },
-  { kind: "pine", x: 33, z: -27, scale: 1.1 },
-  { kind: "tall", x: 19, z: -29, scale: 1.15 },
-];
+// A hand-tuned but organically-scattered default scene: dense clustered
+// tree lines behind the billboard, a couple of big trees close to camera on
+// either side for foreground framing, rocks/bushes/grass tucked along the
+// roadside, one utility pole, and soft background hills — replacing the old
+// perfectly mirrored grid layout.
+function buildDefaultScene(): SceneConfig {
+  const rng = mulberry32(20260830);
+  const rand = (a: number, b: number) => a + rng() * (b - a);
+  const kinds: TreeItem["kind"][] = ["round", "tall", "pine"];
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(rng() * arr.length)];
 
-const DEFAULT_ROCKS: RockItem[] = [
-  { x: -12, z: 3, scale: 0.55 },
-  { x: -9.5, z: 6.5, scale: 0.4 },
-  { x: 11, z: 4, scale: 0.6 },
-  { x: 8.5, z: 7, scale: 0.42 },
-  { x: -6, z: -3, scale: 0.35 },
-  { x: 6.5, z: -2.5, scale: 0.45 },
-];
+  const trees: TreeItem[] = [];
+  const rocks: RockItem[] = [];
+  const bushes: BushItem[] = [];
+  const grass: GrassItem[] = [];
 
-const DEFAULT_CLOUDS: CloudItem[] = [
-  { x: -48, y: 30, z: -50, scale: 3.2 },
-  { x: 44, y: 34, z: -60, scale: 3.8 },
-  { x: -60, y: 26, z: -70, scale: 2.8 },
-];
+  for (const side of [-1, 1] as const) {
+    // foreground framing trees, between the road and the camera
+    for (let i = 0; i < 2; i++) {
+      trees.push({ kind: pick(kinds), x: side * rand(11, 21), z: rand(15, 19), scale: rand(1.55, 1.95) });
+    }
+    // dense mid band right behind the billboard
+    for (let i = 0; i < 8; i++) {
+      trees.push({ kind: pick(kinds), x: side * rand(7, 32), z: rand(-24, -3), scale: rand(0.85, 1.35) });
+    }
+    // sparser far band for depth
+    for (let i = 0; i < 6; i++) {
+      trees.push({ kind: pick(kinds), x: side * rand(6, 40), z: rand(-46, -26), scale: rand(0.55, 0.95) });
+    }
+    // rocks and bushes tucked along the roadside grass
+    for (let i = 0; i < 4; i++) {
+      rocks.push({ x: side * rand(3, 15), z: rand(-9, -1), scale: rand(0.32, 0.62) });
+    }
+    for (let i = 0; i < 3; i++) {
+      const z = rng() < 0.5 ? rand(-8, -1) : rand(15.5, 19);
+      bushes.push({ x: side * rand(5.5, 14), z, scale: rand(0.7, 1.15) });
+    }
+    // grass tufts scattered everywhere but on the asphalt
+    for (let i = 0; i < 14; i++) {
+      const z = rng() < 0.5 ? rand(-22, -1) : rand(15, 20);
+      grass.push({ x: side * rand(1, 34), z, scale: rand(0.7, 1.3) });
+    }
+  }
 
-const DEFAULT_HILLS: HillItem[] = [
-  { x: -30, z: -70, sx: 55, sy: 13 },
-  { x: 25, z: -80, sx: 65, sy: 15 },
-  { x: -5, z: -95, sx: 70, sy: 12 },
-];
+  return {
+    camera: {
+      x: -9,
+      y: POLE_H * 1.05,
+      z: PANEL_W * 1.85,
+      lookX: 2,
+      lookY: POLE_H + PANEL_H * 0.32,
+      lookZ: 0,
+      fov: 42,
+    },
+    trees,
+    rocks,
+    bushes,
+    grass,
+    poles: [{ x: 8.5, z: 15, scale: 1.15 }],
+    clouds: [
+      { x: -48, y: 30, z: -50, scale: 3.2 },
+      { x: 44, y: 34, z: -60, scale: 3.8 },
+      { x: -60, y: 26, z: -70, scale: 2.8 },
+    ],
+    hills: [
+      { x: -30, z: -70, sx: 55, sy: 13 },
+      { x: 25, z: -80, sx: 65, sy: 15 },
+      { x: -5, z: -95, sx: 70, sy: 12 },
+    ],
+  };
+}
 
-export const DEFAULT_SCENE_CONFIG: SceneConfig = {
-  camera: DEFAULT_CAMERA,
-  trees: DEFAULT_TREES,
-  rocks: DEFAULT_ROCKS,
-  clouds: DEFAULT_CLOUDS,
-  hills: DEFAULT_HILLS,
-};
+export const DEFAULT_SCENE_CONFIG: SceneConfig = buildDefaultScene();
 
 export default function OgBillboardScene({
   data,
@@ -330,7 +526,7 @@ export default function OgBillboardScene({
         <fog attach="fog" args={[PAL.fog, 60, 260]} />
         <SkyDome />
         <Lights />
-        <SimpleGround />
+        <Terrain />
         <Decor scene={scene} />
         <Billboard data={data} icon={icon} />
         <CameraController config={scene.camera} />
