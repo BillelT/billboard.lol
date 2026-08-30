@@ -199,15 +199,26 @@ function Terrain() {
   );
 }
 
+// One geometry per tree *kind*, one for rocks, one for bushes — shared
+// across every instance via the mesh's own position/scale, instead of a
+// fresh BufferGeometry per decor item (was ~190+ duplicate geometries for
+// only 5 distinct shapes).
 function Decor({ scene }: { scene: SceneConfig }) {
-  const trees = useMemo(() => scene.trees.map((t) => ({ ...t, geometry: makeTreeGeometry(t.kind) })), [scene.trees]);
-  useEffect(() => () => trees.forEach((t) => t.geometry.dispose()), [trees]);
+  const treeGeometries = useMemo(
+    () => ({
+      round: makeTreeGeometry("round"),
+      tall: makeTreeGeometry("tall"),
+      pine: makeTreeGeometry("pine"),
+    }),
+    [],
+  );
+  useEffect(() => () => Object.values(treeGeometries).forEach((g) => g.dispose()), [treeGeometries]);
 
-  const rocks = useMemo(() => scene.rocks.map((r) => ({ ...r, geometry: makeRockGeometry() })), [scene.rocks]);
-  useEffect(() => () => rocks.forEach((r) => r.geometry.dispose()), [rocks]);
+  const rockGeometry = useMemo(() => makeRockGeometry(), []);
+  useEffect(() => () => rockGeometry.dispose(), [rockGeometry]);
 
-  const bushes = useMemo(() => scene.bushes.map((b) => ({ ...b, geometry: makeBushGeometry() })), [scene.bushes]);
-  useEffect(() => () => bushes.forEach((b) => b.geometry.dispose()), [bushes]);
+  const bushGeometry = useMemo(() => makeBushGeometry(), []);
+  useEffect(() => () => bushGeometry.dispose(), [bushGeometry]);
 
   const grassGeometry = useMemo(() => makeGrassTuftGeometry(), []);
   useEffect(() => () => grassGeometry.dispose(), [grassGeometry]);
@@ -232,14 +243,14 @@ function Decor({ scene }: { scene: SceneConfig }) {
 
   return (
     <>
-      {trees.map((t, i) => (
-        <mesh key={`tree-${i}`} geometry={t.geometry} material={vertexColorMat} position={[t.x, terrainHeight(t.x, t.z), t.z]} scale={t.scale} castShadow receiveShadow />
+      {scene.trees.map((t, i) => (
+        <mesh key={`tree-${i}`} geometry={treeGeometries[t.kind]} material={vertexColorMat} position={[t.x, terrainHeight(t.x, t.z), t.z]} scale={t.scale} castShadow receiveShadow />
       ))}
-      {rocks.map((r, i) => (
-        <mesh key={`rock-${i}`} geometry={r.geometry} material={vertexColorMat} position={[r.x, terrainHeight(r.x, r.z), r.z]} scale={r.scale} receiveShadow />
+      {scene.rocks.map((r, i) => (
+        <mesh key={`rock-${i}`} geometry={rockGeometry} material={vertexColorMat} position={[r.x, terrainHeight(r.x, r.z), r.z]} scale={r.scale} receiveShadow />
       ))}
-      {bushes.map((b, i) => (
-        <mesh key={`bush-${i}`} geometry={b.geometry} material={vertexColorMat} position={[b.x, terrainHeight(b.x, b.z), b.z]} scale={b.scale} castShadow receiveShadow />
+      {scene.bushes.map((b, i) => (
+        <mesh key={`bush-${i}`} geometry={bushGeometry} material={vertexColorMat} position={[b.x, terrainHeight(b.x, b.z), b.z]} scale={b.scale} castShadow receiveShadow />
       ))}
       {scene.grass.map((g, i) => (
         <mesh key={`grass-${i}`} geometry={grassGeometry} material={vertexColorMat} position={[g.x, terrainHeight(g.x, g.z), g.z]} scale={g.scale} />
@@ -251,7 +262,14 @@ function Decor({ scene }: { scene: SceneConfig }) {
         </group>
       ))}
       {scene.clouds.map((c, i) => (
-        <mesh key={`cloud-${i}`} geometry={cloudGeometry} material={cloudMaterial} position={[c.x, c.y, c.z]} scale={c.scale} />
+        <mesh
+          key={`cloud-${i}`}
+          geometry={cloudGeometry}
+          material={cloudMaterial}
+          position={[c.x, c.y, c.z]}
+          rotation={[0, CLOUD_FACE_ROTATION_Y, 0]}
+          scale={c.scale}
+        />
       ))}
     </>
   );
@@ -302,20 +320,54 @@ function clearsBillboard(x: number, z: number): boolean {
   return Math.abs(x) > BILLBOARD_CLEAR_X || z < BILLBOARD_CLEAR_Z[0] || z > BILLBOARD_CLEAR_Z[1];
 }
 
-const CLEAR_ZONE_FAR_Z = -75;
+function onRoad(x: number, z: number): boolean {
+  return Math.abs(z - ROAD_Z) < ROAD_HALF_W + 1 && Math.abs(x) < 58;
+}
+
+// The OG camera's own forward/right unit vectors (derived from its fixed
+// x:9,y:10,z:18 / lookX:-7,lookY:7.5 config below). Decor is scattered in
+// these camera-relative coordinates — depth `d` along forward, lateral `a`
+// along right — instead of world x/z: a world-axis-aligned box doesn't
+// track this camera's skewed, angled frustum, so it either dumps decor
+// off-frame to the right or leaves the visible field bare. Sampling in
+// camera space keeps everything inside what's actually seen, while `d`
+// can run far out for a real, receding background.
+const CAM_ORIGIN_X = 9;
+const CAM_ORIGIN_Z = 18;
+const CAM_FORWARD = { x: -0.6607, z: -0.7434 };
+const CAM_RIGHT = { x: 0.7474, z: -0.6644 };
+function camPoint(d: number, a: number): { x: number; z: number } {
+  return {
+    x: CAM_ORIGIN_X + d * CAM_FORWARD.x + a * CAM_RIGHT.x,
+    z: CAM_ORIGIN_Z + d * CAM_FORWARD.z + a * CAM_RIGHT.z,
+  };
+}
+
+// Cloud geometry is built elongated along its own local +X (see
+// makeCloudGeometry in lib/geometry.ts) — left un-rotated, the camera above
+// was seeing that shape edge-on. Yaw it so local +X lines up with the
+// camera's right vector instead, so every cloud presents its broad side.
+export const CLOUD_FACE_ROTATION_Y = Math.atan2(-CAM_RIGHT.z + 0.7, CAM_RIGHT.x);
 
 function buildDefaultScene(): SceneConfig {
-  const rng = mulberry32(11223344); 
+  const rng = mulberry32(11223344);
   const rand = (a: number, b: number) => a + rng() * (b - a);
   const kinds: TreeItem["kind"][] = ["round", "tall", "pine"];
   const pick = <T,>(arr: T[]): T => arr[Math.floor(rng() * arr.length)];
-  const clearing = (gen: () => { x: number; z: number }) => {
-    let p = gen();
+  const isFree = (x: number, z: number) => clearsBillboard(x, z) && !onRoad(x, z);
+  // Sample within the visible cone at depth `d` (distance along the
+  // camera's forward axis) with a lateral offset expressed as a fraction of
+  // the frustum's half-width at that depth — so the box always tracks what
+  // the camera can actually see, at any distance.
+  const clearing = (dMin: number, dMax: number, aFracMin: number, aFracMax: number) => {
+    let p = { x: 0, z: 0 };
     let tries = 0;
-    while (!clearsBillboard(p.x, p.z) && tries < 10) {
-      p = gen();
+    do {
+      const d = rand(dMin, dMax);
+      const a = d * rand(aFracMin, aFracMax);
+      p = camPoint(d, a);
       tries++;
-    }
+    } while (!isFree(p.x, p.z) && tries < 12);
     return p;
   };
 
@@ -324,54 +376,75 @@ function buildDefaultScene(): SceneConfig {
   const bushes: BushItem[] = [];
   const grass: GrassItem[] = [];
 
-  // GAUCHE : Densification organique du premier plan/plan intermédiaire
-  for (let i = 0; i < 28; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-45, -9), z: rand(-30, 2) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.85, 1.3) });
+// Bande proche : Début repoussé (26) pour supprimer l'arbre isolé collé à la route.
+  // On réduit l'extension à droite (1.0) pour rééquilibrer la scène.
+  for (let i = 0; i < 12; i++) { 
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.8, 1.2) });
+  }
+  for (let i = 0; i < 6; i++) {
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
+    bushes.push({ x, z, scale: rand(0.6, 1.0) });
+  }
+  for (let i = 0; i < 4; i++) {
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
+    rocks.push({ x, z, scale: rand(0.35, 0.65) });
+  }
+  for (let i = 0; i < 15; i++) {
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
+    grass.push({ x, z, scale: rand(0.7, 1.2) });
   }
 
-  // DROITE (Proche) : On éloigne la limite de la route (z s'arrête à -4 au lieu de +5)
-  // pour éviter l'alignement rectiligne rouge
-  for (let i = 0; i < 18; i++) {
-    const { x, z } = clearing(() => ({ x: rand(10, 50), z: rand(-35, -4) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.75, 1.25) });
+  // Bande médiane : Décalage fort vers la gauche (-0.7) et augmentation 
+  // des quantités pour saturer la zone orange de l'image.
+  for (let i = 0; i < 65; i++) {
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.55, 0.95) });
   }
-
-  // ARRIÈRE-PLAN : Forêt très dense couvrant tout l'horizon
-  for (let i = 0; i < 45; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-45, 95), z: rand(CLEAR_ZONE_FAR_Z, -15) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.75, 1.3) });
+  for (let i = 0; i < 20; i++) {
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
+    bushes.push({ x, z, scale: rand(0.5, 0.85) });
   }
-  
-  // ARRIÈRE-PLAN DROITE : Extrême densité pour combler le vide repéré en noir
+  for (let i = 0; i < 12; i++) {
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
+    rocks.push({ x, z, scale: rand(0.3, 0.55) });
+  }
   for (let i = 0; i < 25; i++) {
-    const { x, z } = clearing(() => ({ x: rand(30, 95), z: rand(CLEAR_ZONE_FAR_Z, -25) }));
-    trees.push({ kind: pick(kinds), x, z, scale: rand(0.75, 1.3) });
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
+    grass.push({ x, z, scale: rand(0.6, 1.0) });
   }
 
-  // Buissons, rochers et herbes redistribués pour éviter l'effet "bord de route"
+  // Arrière-plan : Toujours orienté vers la gauche (-0.55) avec une densité élevée.
+  for (let i = 0; i < 75; i++) { 
+    const { x, z } = clearing(85, 135, -0.55, 0.8);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.35, 0.7) });
+  }
+  for (let i = 0; i < 15; i++) {
+    const { x, z } = clearing(85, 135, -0.55, 0.8);
+    bushes.push({ x, z, scale: rand(0.3, 0.55) });
+  }
+  for (let i = 0; i < 20; i++) {
+    const { x, z } = clearing(85, 135, -0.55, 0.8);
+    grass.push({ x, z, scale: rand(0.5, 0.85) });
+  }
+
+  // Très lointain : Recentré doucement pour fondre l'horizon.
   for (let i = 0; i < 35; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-45, 80), z: rand(-45, -2) }));
-    bushes.push({ x, z, scale: rand(0.7, 1.2) });
-  }
-  for (let i = 0; i < 25; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-45, 85), z: rand(-50, -2) }));
-    rocks.push({ x, z, scale: rand(0.4, 0.75) });
-  }
-  for (let i = 0; i < 70; i++) {
-    const { x, z } = clearing(() => ({ x: rand(-50, 95), z: rand(-65, 4) }));
-    grass.push({ x, z, scale: rand(0.7, 1.3) });
+    const { x, z } = clearing(135, 175, -0.4, 0.7);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.25, 0.45) });
   }
 
   return {
     camera: {
-      x: -7.72,
-      y: 9,
-      z: PANEL_W + 0,
-      lookX: -0.57,
-      lookY: 7.7,    
+      // Shifted to the billboard's right, looking back across an empty
+      // stretch of decor on the left — that's where the OG UI overlay sits.
+      x: 9.5,
+      y: 10,
+      z: 17,
+      lookX: -7,
+      lookY: 7.5,
       lookZ: 0,
-      fov: 57,
+      fov: 55,
     },
     fog: { near: 0, far: 215 },
     trees,
@@ -380,13 +453,15 @@ function buildDefaultScene(): SceneConfig {
     grass,
     poles: [{ x: 25, z: 0, scale: 1.15 }, { x: 52, z: -5, scale: 1.10 }],
     
+    // Positioned in this camera's own view frustum (x:9.5,y:10,z:17,
+    // lookX:-7,lookY:7.5,fov:55) — one small/low over the road on the left,
+    // one bigger and higher center-left, one above the billboard's lights,
+    // one large one out toward the right edge.
     clouds: [
-      { x: 60, y: 21, z: -25, scale: 3.0 },
-      { x: 12,  y: 26, z: -50, scale: 2.8 },
-      { x: 41,  y: 21, z: -60, scale: 4.2 },
-      { x: -15, y: 19, z: -80, scale: 4.5 },
-      { x: 75,  y: 36.2, z: -67, scale: 4.5 },
-      { x: -28, y: 24, z: -65, scale: 2.0 },
+      { x: -21.4, y: 16.3, z: 6.6, scale:1.8 },
+      { x: -24.6, y: 23.7, z: -14.9, scale: 3.2 },
+      { x: -10, y: 18.8, z: -28.1, scale: 2.6 },
+      { x: 13, y: 24, z: -59.4, scale: 4.0 },
     ],
   };
 }
@@ -422,7 +497,7 @@ export default function OgBillboardScene({
   }, [data.name]);
 
   return (
-    <div style={{ width: 1200, height: 630, backgroundColor: "#5cb4f7" }}>
+    <div style={{ width: 1200, height: 630, backgroundColor: "#5cb4f7", position: "relative", overflow: "hidden" }}>
       <Canvas
         dpr={1}
         shadows="soft"
@@ -447,7 +522,94 @@ export default function OgBillboardScene({
         <CameraController config={scene.camera} />
         {iconSettled && <ReadySignal onReady={() => setReady(true)} />}
       </Canvas>
+      <OgOverlay />
       {ready && <div data-og-ready="true" style={{ position: "fixed", width: 0, height: 0 }} />}
+    </div>
+  );
+}
+
+// Warm --paper wash over the empty stretch of decor the camera now leaves on
+// the left, carrying the title/subtitle and the site's own wordmark — the
+// 3D render stops being just a screenshot of the billboard and becomes a card.
+function OgOverlay() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        pointerEvents: "none",
+        fontFamily: "var(--font)",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(90deg, rgba(255,250,240,0.99) 0%, rgba(255,250,240,0.92) 20%, rgba(255,250,240,0.71) 34%, rgba(255,250,240,0.52) 40%, rgba(255,250,240,0.37) 45%, rgba(255,250,240,0.12) 51%, rgba(255,250,240,0) 57%)",
+        }}
+      />
+
+      <div
+        style={{
+          position: "relative",
+          display: "inline-flex",
+          alignSelf: "flex-start",
+          alignItems: "center",
+          margin: "36px 0 0 40px",
+          padding: "9px 18px 9px 13px",
+          background: "var(--paper)",
+          border: "1.5px solid var(--ink)",
+          borderRadius: "10px",
+          boxShadow: "3px 3px 0 var(--ink)",
+          fontSize: 20,
+          fontWeight: 700,
+          letterSpacing: "-0.02em",
+          color: "var(--ink)",
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            width: 15,
+            height: 15,
+            marginRight: 10,
+            border: "1.5px solid var(--ink)",
+            borderRadius: 3,
+            background: "linear-gradient(#f2b632 55%, #ffffff 55%)",
+          }}
+        />
+        bidboard<em style={{ fontStyle: "normal", color: "var(--ink-3)" }}>.lol</em>
+      </div>
+
+      <div style={{ position: "relative", padding: "0 40px 56px", maxWidth: 560 }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 44,
+            fontWeight: 700,
+            lineHeight: 1,
+            letterSpacing: "-0.03em",
+            color: "var(--ink)",
+          }}
+        >
+          Get the biggest billboard for your brand.
+        </h1>
+        <p
+          style={{
+            margin: "14px 0 0",
+            fontSize: 24,
+            fontWeight: 500,
+            lineHeight: 1.2,
+            color: "var(--ink-2)",
+          }}
+        >
+          Advertise on a digital 3D highway seen by thousands every day.
+        </p>
+      </div>
     </div>
   );
 }
