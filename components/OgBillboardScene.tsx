@@ -367,11 +367,11 @@ function buildDefaultScene(): SceneConfig {
     camera: {
       // Shifted to the billboard's right, looking back across an empty
       // stretch of decor on the left — that's where the OG UI overlay sits.
-      x: 18,
-      y: 11,
-      z: 14,
-      lookX: -9,
-      lookY: 8.5,
+      x: 9,
+      y: 10,
+      z: 18,
+      lookX: -7,
+      lookY: 7.5,
       lookZ: 0,
       fov: 55,
     },
