@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { paint, merge, place, box } from "./geometry";
+import { paint, merge, place, box, jitterFacets } from "./geometry";
 import { NIGHT } from "./nightPalette";
 
 // A weathered cousin of makeBillboardGeometry (see geometry.ts): same frame
@@ -67,7 +67,7 @@ export function makeBrokenBillboardGeometry(
     );
   }
 
-  // lamps: one still burning, one dark and hanging crooked
+  // lamps: both dead now — one hanging crooked, one just dark and unlit
   const u = THREE.MathUtils.clamp(panelH * 0.062, 0.2, 1.3);
   const lampY = poleH + panelH + fw * 0.8;
   const lampXs = [-panelW * 0.24, panelW * 0.24];
@@ -81,11 +81,6 @@ export function makeBrokenBillboardGeometry(
     head.rotateX(dead ? 0.95 : 0.55);
     if (dead) head.rotateZ(0.16);
     parts.push(paint(place(head, lx, lampY + u * 1.35, tk * 0.9 + u * 1.75, u), NIGHT.steelDark));
-    if (!dead) {
-      const glass = box(1.6, 0.14, 0.85);
-      glass.rotateX(0.55);
-      parts.push(paint(place(glass, lx, lampY + u * 0.95, tk * 0.9 + u * 1.62, u), NIGHT.lampGlow));
-    }
   });
 
   // a torn corner flap, peeled back off the face
@@ -99,24 +94,48 @@ export function makeBrokenBillboardGeometry(
 
 // A small, low-poly crow, folded and perched — one merged geometry, so the
 // idle animation applied to it (see Night404Crow) sways the whole bird rather
-// than any one part.
+// than any one part. Built from jittered blobs and tapered cones rather than
+// bricks, so it reads as a feathered shape instead of a stack of boxes.
 export function makeCrowGeometry(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  const body = box(0.6, 0.4, 0.86);
-  body.rotateX(0.12);
-  parts.push(paint(place(body, 0, 0.4, 0), NIGHT.crow));
-  parts.push(paint(place(box(0.34, 0.32, 0.34), 0, 0.68, 0.38), NIGHT.crow));
-  parts.push(paint(place(box(0.26, 0.1, 0.16), 0, 0.66, 0.6), NIGHT.crowBeak));
-  const tail = box(0.46, 0.06, 0.48);
-  tail.rotateX(-0.3);
-  parts.push(paint(place(tail, 0, 0.3, -0.58), NIGHT.crow));
+
   for (const s of [1, -1]) {
-    const wing = box(0.13, 0.36, 0.68);
-    wing.rotateZ(s * 0.12);
-    parts.push(paint(place(wing, s * 0.32, 0.44, -0.04), NIGHT.crow));
+    const leg = new THREE.CylinderGeometry(0.022, 0.028, 0.22, 5);
+    parts.push(paint(place(leg, s * 0.08, 0.11, 0.03), NIGHT.crowBeak));
   }
+
+  // body: an elongated, jittered blob that tapers toward the tail instead of
+  // a flat-sided box
+  const body = new THREE.IcosahedronGeometry(0.4, 1);
+  jitterFacets(body, 0.14);
+  body.scale(0.6, 0.58, 1);
+  body.rotateX(-0.2);
+  parts.push(paint(place(body, 0, 0.46, -0.04), NIGHT.crow));
+
+  const head = new THREE.IcosahedronGeometry(0.23, 1);
+  jitterFacets(head, 0.12);
+  parts.push(paint(place(head, 0, 0.74, 0.28), NIGHT.crow));
+
+  // beak: an actual point, not a brick
+  const beak = new THREE.ConeGeometry(0.075, 0.32, 5);
+  beak.rotateX(Math.PI / 2);
+  parts.push(paint(place(beak, 0, 0.71, 0.53), NIGHT.crowBeak));
+
+  // tail: a flattened fan tapering to a point behind the body
+  const tail = new THREE.ConeGeometry(0.28, 0.6, 5);
+  tail.scale(1, 1, 0.32);
+  tail.rotateX(-Math.PI / 2);
+  parts.push(paint(place(tail, 0, 0.32, -0.6), NIGHT.crow));
+
+  // wings folded flat along the body's sides, tapering to a point near the
+  // tail rather than squared-off slabs
   for (const s of [1, -1]) {
-    parts.push(paint(place(box(0.06, 0.26, 0.06), s * 0.13, 0.13, 0.04), NIGHT.crowBeak));
+    const wing = new THREE.ConeGeometry(0.2, 0.82, 5);
+    wing.scale(0.5, 1, 1);
+    wing.rotateZ(-Math.PI / 2);
+    wing.rotateY(s * 0.1);
+    parts.push(paint(place(wing, s * 0.22, 0.48, -0.06), NIGHT.crow));
   }
+
   return merge(parts);
 }
