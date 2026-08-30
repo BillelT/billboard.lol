@@ -363,6 +363,26 @@ function buildDefaultScene(): SceneConfig {
     grass.push({ x, z, scale: rand(0.7, 1.3) });
   }
 
+  // MI-CHAMP GAUCHE : le nouveau cadrage caméra (côté droit, grand angle)
+  // laisse un vide organique dans le champ visible à gauche — on le comble
+  // sans toucher au billboard ni à la route.
+  for (let i = 0; i < 20; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-38, -4), z: rand(-16, 3) }));
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.7, 1.15) });
+  }
+  for (let i = 0; i < 12; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-38, -3), z: rand(-16, 3) }));
+    bushes.push({ x, z, scale: rand(0.6, 1.0) });
+  }
+  for (let i = 0; i < 10; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-38, -3), z: rand(-18, 3) }));
+    rocks.push({ x, z, scale: rand(0.35, 0.65) });
+  }
+  for (let i = 0; i < 24; i++) {
+    const { x, z } = clearing(() => ({ x: rand(-40, -2), z: rand(-18, 4) }));
+    grass.push({ x, z, scale: rand(0.7, 1.2) });
+  }
+
   return {
     camera: {
       // Shifted to the billboard's right, looking back across an empty
@@ -476,7 +496,7 @@ function OgOverlay() {
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(90deg, rgba(255,250,240,0.9) 0%, rgba(255,250,240,0.9) 30%, rgba(255,250,240,0) 45%)",
+            "linear-gradient(90deg, rgba(255,250,240,0.94) 0%, rgba(255,250,240,0.9) 24%, rgba(255,250,240,0.7) 33%, rgba(255,250,240,0.36) 39%, rgba(255,250,240,0.1) 43%, rgba(255,250,240,0) 46%)",
         }}
       />
 
@@ -492,7 +512,7 @@ function OgOverlay() {
           border: "1.5px solid var(--ink)",
           borderRadius: "10px",
           boxShadow: "3px 3px 0 var(--ink)",
-          fontSize: 21,
+          fontSize: 18,
           fontWeight: 700,
           letterSpacing: "-0.02em",
           color: "var(--ink)",
@@ -501,8 +521,8 @@ function OgOverlay() {
         <span
           aria-hidden="true"
           style={{
-            width: 17,
-            height: 17,
+            width: 15,
+            height: 15,
             marginRight: 10,
             border: "1.5px solid var(--ink)",
             borderRadius: 3,
@@ -512,13 +532,13 @@ function OgOverlay() {
         bidboard<em style={{ fontStyle: "normal", color: "var(--ink-3)" }}>.lol</em>
       </div>
 
-      <div style={{ position: "relative", padding: "0 40px 64px", maxWidth: 560 }}>
+      <div style={{ position: "relative", padding: "0 40px 56px", maxWidth: 500 }}>
         <h1
           style={{
             margin: 0,
-            fontSize: 44,
+            fontSize: 36,
             fontWeight: 700,
-            lineHeight: 1.05,
+            lineHeight: 1.08,
             letterSpacing: "-0.03em",
             color: "var(--ink)",
           }}
@@ -527,10 +547,10 @@ function OgOverlay() {
         </h1>
         <p
           style={{
-            margin: "16px 0 0",
-            fontSize: 23,
+            margin: "14px 0 0",
+            fontSize: 19,
             fontWeight: 500,
-            lineHeight: 1.35,
+            lineHeight: 1.4,
             color: "var(--ink-2)",
           }}
         >
