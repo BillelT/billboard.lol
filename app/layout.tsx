@@ -17,7 +17,7 @@ const outfit = localFont({
 
 const title = "bidboard.lol — the biggest billboard money can buy";
 const description =
-  "A low-poly American highway where companies bid for billboards. Pay more, get bigger, get seen first. A satire, obviously.";
+  "bidboard.lol is a live pay-to-outbid leaderboard: bid real money to plant a billboard on a low-poly American highway. Outbid the leader, get bigger, get seen first.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(site),
@@ -80,7 +80,7 @@ const jsonLd = {
       "@id": `${site}/#service`,
       name: "bidboard.lol billboard placement",
       description:
-        "Paid ranking where companies bid for the biggest billboard on a low-poly American highway.",
+        "Pay-to-outbid ranking where companies bid for the biggest billboard on a low-poly American highway. Outbid the current leader to take the #1 spot.",
       provider: { "@id": `${site}/#organization` },
       areaServed: "Worldwide",
       offers: { "@type": "Offer", priceCurrency: "USD", availability: "https://schema.org/InStock" },
