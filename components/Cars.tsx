@@ -24,8 +24,8 @@ const RESPAWN_TIME = 1.15; // seconds a car stays hidden after exploding
 
 // each car honks now and then on its own; bumping it makes honks come faster
 // for a little while, so a streak of taps turns into an angry car horn.
-const HONK_INTERVAL_MIN = 7; // seconds between honks, calm car, lower bound
-const HONK_INTERVAL_MAX = 22; // ...and upper bound
+const HONK_INTERVAL_MIN = 16; // seconds between honks, calm car, lower bound
+const HONK_INTERVAL_MAX = 45; // ...and upper bound
 const HONK_BOOST_INTERVAL_MIN = 1.1; // fully riled up, lower bound
 const HONK_BOOST_INTERVAL_MAX = 3.2; // ...and upper bound
 const HONK_BOOST_PER_BUMP = 0.6;
