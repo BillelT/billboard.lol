@@ -6,10 +6,16 @@ import DataSync from "@/components/DataSync";
 import BuyModal from "@/components/BuyModal";
 import { getRanking } from "@/lib/ranking.server";
 import { fmtUSD } from "@/lib/layout";
+import { SITE_TITLE } from "@/lib/seo";
 
 export const revalidate = 30;
 
-// The title carries the current leader, so the link itself is part of the game.
+// The <title>/og:title stay fixed to bidboard.lol's own name and pitch —
+// they used to read "Currently #1: {leader} — bidboard.lol", which handed a
+// competitor's brand the exact text Google indexes for this page, in a spot
+// with no link back to them. The leader still shows up (freshness, and the
+// OG image already renders their billboard), just in the description now,
+// after the brand, not instead of it.
 //
 // The root layout pins canonical/og:url to a bare "/" for every request,
 // which is correct for SEO (query-string variants of the homepage shouldn't
@@ -51,14 +57,12 @@ export async function generateMetadata({
   if (!leader) {
     return { alternates: { canonical: url }, openGraph: { url, images: [image] }, twitter: { images: [image] } };
   }
-  const title = `Currently #1: ${leader.name} — bidboard.lol`;
-  const description = `${leader.name} paid ${fmtUSD(leader.amount)} for the biggest billboard on bidboard.lol's highway. Outbid them for ${fmtUSD(leader.amount + 1)} and take #1.`;
+  const description = `${SITE_TITLE}. Right now ${leader.name} holds #1 at ${fmtUSD(leader.amount)} — outbid them for ${fmtUSD(leader.amount + 1)}.`;
   return {
-    title,
     description,
     alternates: { canonical: url },
-    openGraph: { title, description, type: "website", url, images: [image] },
-    twitter: { card: "summary_large_image", title, description, images: [image] },
+    openGraph: { description, type: "website", url, images: [image] },
+    twitter: { card: "summary_large_image", description, images: [image] },
   };
 }
 

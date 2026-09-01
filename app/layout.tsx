@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 
 const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
@@ -15,9 +16,8 @@ const outfit = localFont({
   display: "swap",
 });
 
-const title = "bidboard.lol — the biggest billboard money can buy";
-const description =
-  "bidboard.lol is a live pay-to-outbid leaderboard: bid real money to plant a billboard on a low-poly American highway. Outbid the leader, get bigger, get seen first.";
+const title = SITE_TITLE;
+const description = SITE_DESCRIPTION;
 
 export const metadata: Metadata = {
   metadataBase: new URL(site),
