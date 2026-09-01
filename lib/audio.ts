@@ -316,6 +316,48 @@ class SceneAudio {
     setTimeout(() => panner.disconnect(), 700);
   }
 
+  /** Random car horn honk — a one-shot stinger like the bump/explosion sounds
+   *  above, but scaled by `gain` (distance-based, see `placementOf`) so a honk
+   *  from a car far down the road stays faint instead of blaring from off-screen. */
+  playHonk(pan: number, gain: number) {
+    const ctx = this.context;
+    if (!ctx || !this.master || !this.on) return;
+    const vol = clamp(gain, 0, 1) * 0.4;
+    if (vol < 0.02) return; // too far off to bother building the graph
+    const t = ctx.currentTime;
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = clamp(pan, -1, 1);
+    panner.connect(this.master);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+    g.gain.setValueAtTime(vol, t + 0.22);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    g.connect(panner);
+
+    // classic two-tone horn: a pair of band-passed saws a few semitones apart
+    for (const [freq, level] of [
+      [330, 0.6],
+      [415, 0.4],
+    ] as const) {
+      const osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = freq;
+      const band = ctx.createBiquadFilter();
+      band.type = "bandpass";
+      band.frequency.value = freq * 2.1;
+      band.Q.value = 3;
+      const og = ctx.createGain();
+      og.gain.value = level;
+      osc.connect(band).connect(og).connect(g);
+      osc.start(t);
+      osc.stop(t + 0.36);
+    }
+
+    setTimeout(() => panner.disconnect(), 450);
+  }
+
   releaseVoice(v: Voice) {
     this.teardown(this.nodesOf.get(v));
     this.nodesOf.delete(v);

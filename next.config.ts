@@ -14,8 +14,7 @@ const nextConfig: NextConfig = {
   // @sparticuz/chromium computes itself, not a static import, so make sure
   // Next's file tracer still copies them into the deployed function.
   outputFileTracingIncludes: {
-    "/opengraph-image": ["./node_modules/@sparticuz/chromium/**"],
-    "/twitter-image": ["./node_modules/@sparticuz/chromium/**"],
+    "/api/og": ["./node_modules/@sparticuz/chromium/**"],
   },
 };
 

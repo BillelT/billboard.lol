@@ -19,7 +19,7 @@ export const debugState = {
   fog: {
     mode: "linear" as "linear" | "exp2",
     near: 0, // where haze starts, relative to the subject
-    far: 2100, // where it tops out — larger is softer, more gradual
+    far: 1500, // where it tops out — larger is softer, more gradual
     density: 0.0015, // exp2 only
     color: "#e6f3ff",
   },

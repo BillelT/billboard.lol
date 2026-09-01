@@ -740,16 +740,18 @@ body {
 }
 
 @media (max-width: 720px) {
+  .masthead {
+    justify-content: left;
+  }
+
   /* stacked and centered right above the dock, trimmed to the numbers that
      matter at a glance — the rest stays a desktop-only rail */
   .gauges {
     left: 16px;
     right: 16px;
-    top: auto;
-    bottom: calc(var(--dock-h, 210px) + 32px);
+    top: 76px;
     transform: none;
     flex-direction: column;
-    align-items: center;
     gap: 6px;
   }
   .gauge {
@@ -758,8 +760,6 @@ body {
     font-size: 13px;
     /* floating and centered here, not docked to an edge — the flag-shaped
        accent border only read right when it was flush against the rail */
-    border: var(--edge-soft);
-    border-radius: 999px;
   }
   /* narrowest at the top, widest right against the dock it feeds into */
   .gauge--made {
@@ -839,9 +839,7 @@ body {
   .modal__cta {
     font-size: 16px;
   }
-}
 
-@media (max-width: 600px) {
   .dock__title {
     font-size: 18px;
   }
@@ -979,6 +977,99 @@ body {
   border: none;
   border-radius: 5px;
   padding: 3px;
+}
+
+/* ---------- og scene builder (/og-render?debug=1) ---------- */
+.og-panel {
+  width: 300px;
+}
+.og-panel .dbg-row input[type="text"],
+.og-panel .dbg-row input[type="number"] {
+  font: inherit;
+  width: 100%;
+  color: #e8f0f7;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 5px;
+  padding: 3px 5px;
+}
+.og-panel section {
+  margin-top: 8px;
+}
+.og-panel-error {
+  margin: 6px 0 0;
+  color: #ff9d9d;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.og-panel-preview {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  border-radius: 6px;
+}
+.og-map-hint {
+  margin: 0 0 6px;
+  opacity: 0.6;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.og-map-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  touch-action: none;
+}
+.og-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.og-map-legend button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  font-size: 10px;
+}
+.og-map-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.og-map-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+}
+.og-map-toolbar span {
+  opacity: 0.7;
+  white-space: nowrap;
+}
+.og-map-toolbar select {
+  font: inherit;
+  color: #e8f0f7;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 4px;
+  padding: 2px 3px;
+}
+.og-map-toolbar input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: #6fb3f0;
+}
+.og-map-toolbar button {
+  padding: 3px 7px;
+  font-size: 10px;
 }
 
 /* ---------------- buy modal: clicking an empty slot in the scene ---------- */

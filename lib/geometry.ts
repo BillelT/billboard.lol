@@ -123,7 +123,7 @@ export function makeBillboardGeometry(panelW: number, panelH: number, poleH: num
   return merge(parts);
 }
 
-function jitterFacets(geo: THREE.BufferGeometry, amp: number) {
+export function jitterFacets(geo: THREE.BufferGeometry, amp: number) {
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);

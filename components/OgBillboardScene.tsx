@@ -1,14 +1,31 @@
 "use client";
 import * as THREE from "three";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { makeBillboardGeometry, makeTreeGeometry, makeRockGeometry, makeCloudGeometry } from "@/lib/geometry";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import {
+  makeBillboardGeometry,
+  makeTreeGeometry,
+  makeRockGeometry,
+  makeCloudGeometry,
+  makeBushGeometry,
+  makeGrassTuftGeometry,
+  makePowerPoleGeometry,
+  makePowerWireGeometry,
+} from "@/lib/geometry";
 import { FACE_RES, makeFaceTexture } from "@/lib/textures";
 import { iconSrc } from "@/lib/icons";
 import { PAL } from "@/lib/palette";
 import { vertexColorMat } from "./materials";
 import SkyDome from "./SkyDome";
 import Lights from "./Lights";
+
+// The OG card's own brighter, more saturated sky/fog — kept local to this
+// file (not lib/palette.ts) so it doesn't repaint the live site's sky and
+// fog for every visitor; see SkyDome's zenith/horizon/ground override props.
+const CUSTOM_SKY_FOG = "#baf5fd";
+const CUSTOM_SKY_ZENITH = "#525dee";
+const CUSTOM_SKY_HORIZON = "#79d5ff";
+const CUSTOM_SKY_GROUND = "#54fab5";
 
 export interface OgBillboardData {
   name: string;
@@ -21,11 +38,31 @@ export interface OgBillboardData {
   claimedAt?: string | null;
 }
 
-// A single, standalone-sized panel — the OG card isn't tied to the live
-// ranking's rank-scaled dimensions, just a clearly-legible #1 billboard.
-const PANEL_H = 7.4;
-const PANEL_W = PANEL_H * 1.9;
+const PANEL_H = 8.3;
+export const PANEL_W = PANEL_H * 1.9;
 const POLE_H = 1.8 + PANEL_H * 0.36;
+
+export const ROAD_Z = 13;
+export const ROAD_HALF_W = 6;
+
+export interface TreeItem { kind: "round" | "tall" | "pine"; x: number; z: number; scale: number; }
+export interface RockItem { x: number; z: number; scale: number; }
+export interface BushItem { x: number; z: number; scale: number; }
+export interface GrassItem { x: number; z: number; scale: number; }
+export interface PoleItem { x: number; z: number; scale: number; }
+export interface CloudItem { x: number; y: number; z: number; scale: number; }
+export interface CameraConfig { x: number; y: number; z: number; lookX: number; lookY: number; lookZ: number; fov: number; }
+export interface FogConfig { near: number; far: number; }
+export interface SceneConfig {
+  camera: CameraConfig;
+  fog: FogConfig;
+  trees: TreeItem[];
+  rocks: RockItem[];
+  bushes: BushItem[];
+  grass: GrassItem[];
+  poles: PoleItem[];
+  clouds: CloudItem[];
+}
 
 function Billboard({ data, icon }: { data: OgBillboardData; icon: HTMLImageElement | null }) {
   const geometry = useMemo(() => makeBillboardGeometry(PANEL_W, PANEL_H, POLE_H), []);
@@ -63,83 +100,131 @@ function Billboard({ data, icon }: { data: OgBillboardData; icon: HTMLImageEleme
   );
 }
 
-// Flat grass plane + a short strip of asphalt — real geometry, just stripped
-// down to what one centered billboard needs. The live scene's own Ground/Road
-// are built around the whole ranking's layout and decor density, which don't
-// apply to a single standalone panel.
-//
-// The billboard's own footprint (panel + posts) sits around z -1..0.5 — the
-// road has to stay well clear of that band, further toward the camera, or
-// the billboard reads as standing in the middle of the road instead of on
-// the grass beside it.
-function SimpleGround() {
+function terrainHeight(x: number, z: number): number {
+  const distFromCorridor = Math.max(0, Math.abs(z - ROAD_Z + 1) - (ROAD_HALF_W + 3));
+  const taper = 1 - Math.exp(-((distFromCorridor / 11) ** 2));
+  const roll = Math.sin(x * 0.045 + z * 0.05) * 0.35 + Math.sin(x * 0.021 - z * 0.032) * 0.55;
+  return roll * taper;
+}
+
+function terrainTint(x: number, z: number): number {
+  return Math.sin(x * 0.05 + z * 0.06) * 0.5 + Math.sin(x * 0.011) * 0.5;
+}
+
+function Terrain() {
+  const geometry = useMemo(() => {
+    const width = 260;
+    const depth = 260;
+    const cols = 52;
+    const rows = 52;
+    const cz = -18;
+
+    const positions = new Float32Array((cols + 1) * (rows + 1) * 3);
+    const colors = new Float32Array((cols + 1) * (rows + 1) * 3);
+    const grass = new THREE.Color(PAL.grass);
+    const light = new THREE.Color(PAL.grassLight);
+    const dark = new THREE.Color(PAL.grassDark);
+    const c = new THREE.Color();
+
+    let v = 0;
+    for (let r = 0; r <= rows; r++) {
+      const z = cz - depth / 2 + (depth * r) / rows;
+      for (let i = 0; i <= cols; i++) {
+        const x = -width / 2 + (width * i) / cols;
+        positions[v * 3] = x;
+        positions[v * 3 + 1] = terrainHeight(x, z);
+        positions[v * 3 + 2] = z;
+        const t = terrainTint(x, z);
+        c.copy(grass).lerp(t > 0 ? light : dark, Math.abs(t) * 0.6);
+        colors[v * 3] = c.r;
+        colors[v * 3 + 1] = c.g;
+        colors[v * 3 + 2] = c.b;
+        v++;
+      }
+    }
+
+    const stride = cols + 1;
+    const indices: number[] = [];
+    for (let r = 0; r < rows; r++) {
+      for (let i = 0; i < cols; i++) {
+        const a = r * stride + i;
+        const b = a + 1;
+        const d = (r + 1) * stride + i;
+        const e = d + 1;
+        indices.push(a, d, b, b, d, e);
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return geo;
+  }, []);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  const roadLen = 110;
+  const dashCount = Math.floor(roadLen / 6);
+
   return (
     <>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -6]} receiveShadow>
-        <planeGeometry args={[240, 240]} />
-        <meshStandardMaterial color={PAL.grass} roughness={1} metalness={0} />
+      <mesh geometry={geometry} receiveShadow>
+        <meshStandardMaterial vertexColors roughness={1} metalness={0} />
       </mesh>
-      <mesh position={[0, 0.02, 8]} receiveShadow>
-        <boxGeometry args={[90, 0.04, 12]} />
+
+      <mesh position={[0, 0.02, ROAD_Z]} receiveShadow>
+        <boxGeometry args={[roadLen, 0.04, ROAD_HALF_W * 2]} />
         <meshStandardMaterial color={PAL.road} roughness={1} metalness={0} />
       </mesh>
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[0, 0.012, ROAD_Z + s * (ROAD_HALF_W + 0.9)]} receiveShadow>
+          <boxGeometry args={[roadLen, 0.024, 1.8]} />
+          <meshStandardMaterial color={PAL.shoulder} roughness={1} metalness={0} />
+        </mesh>
+      ))}
+      {[-1, 1].map((s) => (
+        <mesh key={`edge-${s}`} position={[0, 0.045, ROAD_Z + s * (ROAD_HALF_W - 0.4)]}>
+          <boxGeometry args={[roadLen, 0.02, 0.16]} />
+          <meshBasicMaterial color={PAL.roadLine} toneMapped={false} />
+        </mesh>
+      ))}
+      {Array.from({ length: dashCount }).map((_, i) => (
+        <mesh key={`dash-${i}`} position={[-roadLen / 2 + 3 + i * 6, 0.05, ROAD_Z]}>
+          <boxGeometry args={[2.6, 0.02, 0.22]} />
+          <meshBasicMaterial color={PAL.roadLine} toneMapped={false} />
+        </mesh>
+      ))}
     </>
   );
 }
 
-// A denser stand of the live scene's own low-poly trees and rocks, scattered
-// behind and beside the billboard for depth — same geometry/palette Decor.tsx
-// uses, just a fixed hand-placed layout instead of a density-driven field.
-const TREE_LAYOUT: { kind: "round" | "tall" | "pine"; x: number; z: number; scale: number }[] = [
-  { kind: "pine", x: -20, z: -14, scale: 1.25 },
-  { kind: "round", x: -14, z: -19, scale: 1.1 },
-  { kind: "tall", x: -23, z: -8, scale: 1.3 },
-  { kind: "pine", x: -27, z: -18, scale: 1.05 },
-  { kind: "round", x: -9, z: -24, scale: 0.95 },
-  { kind: "pine", x: -32, z: -26, scale: 1.15 },
-  { kind: "tall", x: -18, z: -28, scale: 1.2 },
-  { kind: "pine", x: 20, z: -15, scale: 1.2 },
-  { kind: "round", x: 14, z: -20, scale: 1.0 },
-  { kind: "tall", x: 24, z: -9, scale: 1.25 },
-  { kind: "pine", x: 28, z: -19, scale: 1.1 },
-  { kind: "round", x: 9, z: -25, scale: 0.9 },
-  { kind: "pine", x: 33, z: -27, scale: 1.1 },
-  { kind: "tall", x: 19, z: -29, scale: 1.15 },
-];
-
-const ROCK_LAYOUT: { x: number; z: number; scale: number }[] = [
-  { x: -12, z: 3, scale: 0.55 },
-  { x: -9.5, z: 6.5, scale: 0.4 },
-  { x: 11, z: 4, scale: 0.6 },
-  { x: 8.5, z: 7, scale: 0.42 },
-  { x: -6, z: -3, scale: 0.35 },
-  { x: 6.5, z: -2.5, scale: 0.45 },
-];
-
-const CLOUD_LAYOUT: { x: number; y: number; z: number; scale: number }[] = [
-  { x: -48, y: 30, z: -50, scale: 3.2 },
-  { x: 44, y: 34, z: -60, scale: 3.8 },
-  { x: -60, y: 26, z: -70, scale: 2.8 },
-];
-
-// Soft, hazy mounds well past the tree line — just enough relief that the
-// horizon doesn't read as a flat green wall, fading toward the fog color the
-// way distant terrain does in the live scene.
-const HILL_LAYOUT: { x: number; z: number; sx: number; sy: number }[] = [
-  { x: -30, z: -70, sx: 55, sy: 13 },
-  { x: 25, z: -80, sx: 65, sy: 15 },
-  { x: -5, z: -95, sx: 70, sy: 12 },
-];
-
-function Decor() {
-  const trees = useMemo(
-    () => TREE_LAYOUT.map((t) => ({ ...t, geometry: makeTreeGeometry(t.kind) })),
+// One geometry per tree *kind*, one for rocks, one for bushes — shared
+// across every instance via the mesh's own position/scale, instead of a
+// fresh BufferGeometry per decor item (was ~190+ duplicate geometries for
+// only 5 distinct shapes).
+function Decor({ scene }: { scene: SceneConfig }) {
+  const treeGeometries = useMemo(
+    () => ({
+      round: makeTreeGeometry("round"),
+      tall: makeTreeGeometry("tall"),
+      pine: makeTreeGeometry("pine"),
+    }),
     [],
   );
-  useEffect(() => () => trees.forEach((t) => t.geometry.dispose()), [trees]);
+  useEffect(() => () => Object.values(treeGeometries).forEach((g) => g.dispose()), [treeGeometries]);
 
-  const rocks = useMemo(() => ROCK_LAYOUT.map((r) => ({ ...r, geometry: makeRockGeometry() })), []);
-  useEffect(() => () => rocks.forEach((r) => r.geometry.dispose()), [rocks]);
+  const rockGeometry = useMemo(() => makeRockGeometry(), []);
+  useEffect(() => () => rockGeometry.dispose(), [rockGeometry]);
+
+  const bushGeometry = useMemo(() => makeBushGeometry(), []);
+  useEffect(() => () => bushGeometry.dispose(), [bushGeometry]);
+
+  const grassGeometry = useMemo(() => makeGrassTuftGeometry(), []);
+  useEffect(() => () => grassGeometry.dispose(), [grassGeometry]);
+
+  const poles = useMemo(() => scene.poles.map((p) => ({ ...p, pole: makePowerPoleGeometry(), wire: makePowerWireGeometry(13) })), [scene.poles]);
+  useEffect(() => () => poles.forEach((p) => { p.pole.dispose(); p.wire.dispose(); }), [poles]);
 
   const cloudGeometry = useMemo(() => makeCloudGeometry(), []);
   useEffect(() => () => cloudGeometry.dispose(), [cloudGeometry]);
@@ -148,55 +233,62 @@ function Decor() {
       new THREE.MeshStandardMaterial({
         color: "#ffffff",
         emissive: "#ffffff",
-        emissiveIntensity: 0.55,
-        roughness: 1,
-        fog: false, // otherwise they blend into the near-identical sky-fog color
+        emissiveIntensity: 0.1,
+        roughness: 0.9,
+        fog: true,
       }),
     [],
   );
   useEffect(() => () => cloudMaterial.dispose(), [cloudMaterial]);
 
-  const hillColor = useMemo(() => new THREE.Color(PAL.grass).lerp(new THREE.Color(PAL.fog), 0.45), []);
-
   return (
     <>
-      {trees.map((t, i) => (
+      {scene.trees.map((t, i) => (
+        <mesh key={`tree-${i}`} geometry={treeGeometries[t.kind]} material={vertexColorMat} position={[t.x, terrainHeight(t.x, t.z), t.z]} scale={t.scale} castShadow receiveShadow />
+      ))}
+      {scene.rocks.map((r, i) => (
+        <mesh key={`rock-${i}`} geometry={rockGeometry} material={vertexColorMat} position={[r.x, terrainHeight(r.x, r.z), r.z]} scale={r.scale} receiveShadow />
+      ))}
+      {scene.bushes.map((b, i) => (
+        <mesh key={`bush-${i}`} geometry={bushGeometry} material={vertexColorMat} position={[b.x, terrainHeight(b.x, b.z), b.z]} scale={b.scale} castShadow receiveShadow />
+      ))}
+      {scene.grass.map((g, i) => (
+        <mesh key={`grass-${i}`} geometry={grassGeometry} material={vertexColorMat} position={[g.x, terrainHeight(g.x, g.z), g.z]} scale={g.scale} />
+      ))}
+      {poles.map((p, i) => (
+        <group key={`pole-${i}`} position={[p.x, terrainHeight(p.x, p.z), p.z]} scale={p.scale}>
+          <mesh geometry={p.pole} material={vertexColorMat} castShadow receiveShadow />
+          <mesh geometry={p.wire} material={vertexColorMat} />
+        </group>
+      ))}
+      {scene.clouds.map((c, i) => (
         <mesh
-          key={`tree-${i}`}
-          geometry={t.geometry}
-          material={vertexColorMat}
-          position={[t.x, 0, t.z]}
-          scale={t.scale}
-          castShadow
-          receiveShadow
+          key={`cloud-${i}`}
+          geometry={cloudGeometry}
+          material={cloudMaterial}
+          position={[c.x, c.y, c.z]}
+          rotation={[0, CLOUD_FACE_ROTATION_Y, 0]}
+          scale={c.scale}
         />
-      ))}
-      {rocks.map((r, i) => (
-        <mesh
-          key={`rock-${i}`}
-          geometry={r.geometry}
-          material={vertexColorMat}
-          position={[r.x, 0, r.z]}
-          scale={r.scale}
-          receiveShadow
-        />
-      ))}
-      {CLOUD_LAYOUT.map((c, i) => (
-        <mesh key={`cloud-${i}`} geometry={cloudGeometry} material={cloudMaterial} position={[c.x, c.y, c.z]} scale={c.scale} />
-      ))}
-      {HILL_LAYOUT.map((h, i) => (
-        <mesh key={`hill-${i}`} position={[h.x, -h.sy * 0.55, h.z]} scale={[h.sx, h.sy, h.sx]}>
-          <sphereGeometry args={[1, 12, 8]} />
-          <meshStandardMaterial color={hillColor} roughness={1} />
-        </mesh>
       ))}
     </>
   );
 }
 
-// Fires once a few frames have painted after the texture (and its favicon,
-// if any) settled — so the headless screenshot never catches a half-drawn
-// first frame.
+function CameraController({ config }: { config: CameraConfig }) {
+  const { camera } = useThree();
+  useFrame(() => {
+    camera.position.set(config.x, config.y, config.z);
+    const cam = camera as THREE.PerspectiveCamera;
+    if (cam.fov !== config.fov) {
+      cam.fov = config.fov;
+      cam.updateProjectionMatrix();
+    }
+    camera.lookAt(config.lookX, config.lookY, config.lookZ);
+  });
+  return null;
+}
+
 function ReadySignal({ onReady }: { onReady: () => void }) {
   const fired = useRef(false);
   const frames = useRef(0);
@@ -211,7 +303,178 @@ function ReadySignal({ onReady }: { onReady: () => void }) {
   return null;
 }
 
-export default function OgBillboardScene({ data }: { data: OgBillboardData }) {
+function mulberry32(seed: number) {
+  let s = seed;
+  return () => {
+    s |= 0;
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const BILLBOARD_CLEAR_X = 8.5;
+const BILLBOARD_CLEAR_Z: [number, number] = [-3, 4];
+function clearsBillboard(x: number, z: number): boolean {
+  return Math.abs(x) > BILLBOARD_CLEAR_X || z < BILLBOARD_CLEAR_Z[0] || z > BILLBOARD_CLEAR_Z[1];
+}
+
+function onRoad(x: number, z: number): boolean {
+  return Math.abs(z - ROAD_Z) < ROAD_HALF_W + 1 && Math.abs(x) < 58;
+}
+
+// The OG camera's own forward/right unit vectors (derived from its fixed
+// x:9,y:10,z:18 / lookX:-7,lookY:7.5 config below). Decor is scattered in
+// these camera-relative coordinates — depth `d` along forward, lateral `a`
+// along right — instead of world x/z: a world-axis-aligned box doesn't
+// track this camera's skewed, angled frustum, so it either dumps decor
+// off-frame to the right or leaves the visible field bare. Sampling in
+// camera space keeps everything inside what's actually seen, while `d`
+// can run far out for a real, receding background.
+const CAM_ORIGIN_X = 9;
+const CAM_ORIGIN_Z = 18;
+const CAM_FORWARD = { x: -0.6607, z: -0.7434 };
+const CAM_RIGHT = { x: 0.7474, z: -0.6644 };
+function camPoint(d: number, a: number): { x: number; z: number } {
+  return {
+    x: CAM_ORIGIN_X + d * CAM_FORWARD.x + a * CAM_RIGHT.x,
+    z: CAM_ORIGIN_Z + d * CAM_FORWARD.z + a * CAM_RIGHT.z,
+  };
+}
+
+// Cloud geometry is built elongated along its own local +X (see
+// makeCloudGeometry in lib/geometry.ts) — left un-rotated, the camera above
+// was seeing that shape edge-on. Yaw it so local +X lines up with the
+// camera's right vector instead, so every cloud presents its broad side.
+export const CLOUD_FACE_ROTATION_Y = Math.atan2(-CAM_RIGHT.z + 0.7, CAM_RIGHT.x);
+
+function buildDefaultScene(): SceneConfig {
+  const rng = mulberry32(11223344);
+  const rand = (a: number, b: number) => a + rng() * (b - a);
+  const kinds: TreeItem["kind"][] = ["round", "tall", "pine"];
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(rng() * arr.length)];
+  const isFree = (x: number, z: number) => clearsBillboard(x, z) && !onRoad(x, z);
+  // Sample within the visible cone at depth `d` (distance along the
+  // camera's forward axis) with a lateral offset expressed as a fraction of
+  // the frustum's half-width at that depth — so the box always tracks what
+  // the camera can actually see, at any distance.
+  const clearing = (dMin: number, dMax: number, aFracMin: number, aFracMax: number) => {
+    let p = { x: 0, z: 0 };
+    let tries = 0;
+    do {
+      const d = rand(dMin, dMax);
+      const a = d * rand(aFracMin, aFracMax);
+      p = camPoint(d, a);
+      tries++;
+    } while (!isFree(p.x, p.z) && tries < 12);
+    return p;
+  };
+
+  const trees: TreeItem[] = [];
+  const rocks: RockItem[] = [];
+  const bushes: BushItem[] = [];
+  const grass: GrassItem[] = [];
+
+// Bande proche : Début repoussé (26) pour supprimer l'arbre isolé collé à la route.
+  // On réduit l'extension à droite (1.0) pour rééquilibrer la scène.
+  for (let i = 0; i < 12; i++) { 
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.8, 1.2) });
+  }
+  for (let i = 0; i < 6; i++) {
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
+    bushes.push({ x, z, scale: rand(0.6, 1.0) });
+  }
+  for (let i = 0; i < 4; i++) {
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
+    rocks.push({ x, z, scale: rand(0.35, 0.65) });
+  }
+  for (let i = 0; i < 15; i++) {
+    const { x, z } = clearing(26, 48, -0.25, 1.0);
+    grass.push({ x, z, scale: rand(0.7, 1.2) });
+  }
+
+  // Bande médiane : Décalage fort vers la gauche (-0.7) et augmentation 
+  // des quantités pour saturer la zone orange de l'image.
+  for (let i = 0; i < 65; i++) {
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.55, 0.95) });
+  }
+  for (let i = 0; i < 20; i++) {
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
+    bushes.push({ x, z, scale: rand(0.5, 0.85) });
+  }
+  for (let i = 0; i < 12; i++) {
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
+    rocks.push({ x, z, scale: rand(0.3, 0.55) });
+  }
+  for (let i = 0; i < 25; i++) {
+    const { x, z } = clearing(48, 85, -0.7, 0.9);
+    grass.push({ x, z, scale: rand(0.6, 1.0) });
+  }
+
+  // Arrière-plan : Toujours orienté vers la gauche (-0.55) avec une densité élevée.
+  for (let i = 0; i < 75; i++) { 
+    const { x, z } = clearing(85, 135, -0.55, 0.8);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.35, 0.7) });
+  }
+  for (let i = 0; i < 15; i++) {
+    const { x, z } = clearing(85, 135, -0.55, 0.8);
+    bushes.push({ x, z, scale: rand(0.3, 0.55) });
+  }
+  for (let i = 0; i < 20; i++) {
+    const { x, z } = clearing(85, 135, -0.55, 0.8);
+    grass.push({ x, z, scale: rand(0.5, 0.85) });
+  }
+
+  // Très lointain : Recentré doucement pour fondre l'horizon.
+  for (let i = 0; i < 35; i++) {
+    const { x, z } = clearing(135, 175, -0.4, 0.7);
+    trees.push({ kind: pick(kinds), x, z, scale: rand(0.25, 0.45) });
+  }
+
+  return {
+    camera: {
+      // Shifted to the billboard's right, looking back across an empty
+      // stretch of decor on the left — that's where the OG UI overlay sits.
+      x: 9.5,
+      y: 10,
+      z: 17,
+      lookX: -7,
+      lookY: 7.5,
+      lookZ: 0,
+      fov: 55,
+    },
+    fog: { near: 0, far: 215 },
+    trees,
+    rocks,
+    bushes,
+    grass,
+    poles: [{ x: 25, z: 0, scale: 1.15 }, { x: 52, z: -5, scale: 1.10 }],
+    
+    // Positioned in this camera's own view frustum (x:9.5,y:10,z:17,
+    // lookX:-7,lookY:7.5,fov:55) — one small/low over the road on the left,
+    // one bigger and higher center-left, one above the billboard's lights,
+    // one large one out toward the right edge.
+    clouds: [
+      { x: -21.4, y: 16.3, z: 6.6, scale:1.8 },
+      { x: -24.6, y: 23.7, z: -14.9, scale: 3.2 },
+      { x: -10, y: 18.8, z: -28.1, scale: 2.6 },
+      { x: 13, y: 24, z: -59.4, scale: 4.0 },
+    ],
+  };
+}
+
+export const DEFAULT_SCENE_CONFIG: SceneConfig = buildDefaultScene();
+
+export default function OgBillboardScene({
+  data,
+  scene = DEFAULT_SCENE_CONFIG,
+}: {
+  data: OgBillboardData;
+  scene?: SceneConfig;
+}) {
   const [icon, setIcon] = useState<HTMLImageElement | null>(null);
   const [iconSettled, setIconSettled] = useState(false);
   const [ready, setReady] = useState(false);
@@ -234,32 +497,119 @@ export default function OgBillboardScene({ data }: { data: OgBillboardData }) {
   }, [data.name]);
 
   return (
-    <div style={{ width: 1200, height: 630 }}>
+    <div style={{ width: 1200, height: 630, backgroundColor: "#5cb4f7", position: "relative", overflow: "hidden" }}>
       <Canvas
         dpr={1}
         shadows="soft"
         camera={{
-          fov: 42,
+          fov: scene.camera.fov,
           near: 1,
-          far: 1700, // SkyDome is a radius-1500 sphere — must stay inside far
-          position: [0, POLE_H * 0.85, PANEL_W * 1.35],
+          far: 1700,
+          position: [scene.camera.x, scene.camera.y, scene.camera.z],
         }}
         gl={{ antialias: true, powerPreference: "high-performance", stencil: false, alpha: false }}
-        onCreated={({ gl, camera }) => {
+        onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 0.9;
-          camera.lookAt(0, POLE_H + PANEL_H * 0.42, 0);
         }}
       >
-        <fog attach="fog" args={[PAL.fog, 60, 260]} />
-        <SkyDome />
+        <fog attach="fog" args={[CUSTOM_SKY_FOG, scene.fog.near, scene.fog.far]} />
+        <SkyDome zenith={CUSTOM_SKY_ZENITH} horizon={CUSTOM_SKY_HORIZON} ground={CUSTOM_SKY_GROUND} />
         <Lights />
-        <SimpleGround />
-        <Decor />
+        <Terrain />
+        <Decor scene={scene} />
         <Billboard data={data} icon={icon} />
+        <CameraController config={scene.camera} />
         {iconSettled && <ReadySignal onReady={() => setReady(true)} />}
       </Canvas>
+      <OgOverlay />
       {ready && <div data-og-ready="true" style={{ position: "fixed", width: 0, height: 0 }} />}
+    </div>
+  );
+}
+
+// Warm --paper wash over the empty stretch of decor the camera now leaves on
+// the left, carrying the title/subtitle and the site's own wordmark — the
+// 3D render stops being just a screenshot of the billboard and becomes a card.
+function OgOverlay() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        pointerEvents: "none",
+        fontFamily: "var(--font)",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(90deg, rgba(255,250,240,0.99) 0%, rgba(255,250,240,0.92) 20%, rgba(255,250,240,0.71) 34%, rgba(255,250,240,0.52) 40%, rgba(255,250,240,0.37) 45%, rgba(255,250,240,0.12) 51%, rgba(255,250,240,0) 57%)",
+        }}
+      />
+
+      <div
+        style={{
+          position: "relative",
+          display: "inline-flex",
+          alignSelf: "flex-start",
+          alignItems: "center",
+          margin: "36px 0 0 40px",
+          padding: "9px 18px 9px 13px",
+          background: "var(--paper)",
+          border: "1.5px solid var(--ink)",
+          borderRadius: "10px",
+          boxShadow: "3px 3px 0 var(--ink)",
+          fontSize: 20,
+          fontWeight: 700,
+          letterSpacing: "-0.02em",
+          color: "var(--ink)",
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            width: 15,
+            height: 15,
+            marginRight: 10,
+            border: "1.5px solid var(--ink)",
+            borderRadius: 3,
+            background: "linear-gradient(#f2b632 55%, #ffffff 55%)",
+          }}
+        />
+        bidboard<em style={{ fontStyle: "normal", color: "var(--ink-3)" }}>.lol</em>
+      </div>
+
+      <div style={{ position: "relative", padding: "0 40px 56px", maxWidth: 560 }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 44,
+            fontWeight: 700,
+            lineHeight: 1,
+            letterSpacing: "-0.03em",
+            color: "var(--ink)",
+          }}
+        >
+          Get the biggest billboard for your brand.
+        </h1>
+        <p
+          style={{
+            margin: "14px 0 0",
+            fontSize: 24,
+            fontWeight: 500,
+            lineHeight: 1.2,
+            color: "var(--ink-2)",
+          }}
+        >
+          Advertise on a digital 3D highway seen by thousands every day.
+        </p>
+      </div>
     </div>
   );
 }

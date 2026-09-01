@@ -26,7 +26,7 @@ export default function Night404Crow({ position }: { position: [number, number, 
   });
 
   return (
-    <group ref={group} position={position} rotation={[0, BASE_YAW, 0]} scale={2.4}>
+    <group ref={group} position={position} rotation={[0, BASE_YAW, 0]} scale={1.5}>
       <mesh geometry={geometry} material={vertexColorMat} castShadow />
     </group>
   );

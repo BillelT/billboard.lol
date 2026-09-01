@@ -16,9 +16,21 @@ export default function Clouds({ layout }: { layout: SceneLayout }) {
     [layout.items],
   );
 
+  // The camera rig's last key rolls out past the final billboard looking
+  // almost straight down the road at car height (see CameraRig.tsx) — a very
+  // different gaze than the aerial/angled views over the billboards, and one
+  // that needs its own low, close-to-the-horizon clouds rather than the
+  // billboard-clearing altitudes below. HEAD/TAIL give clouds room on both
+  // ends of the road so neither the opening nor this epilogue reads empty.
+  const HEAD = 100;
+  const TAIL = 260;
+
   const { mesh, base } = useMemo(() => {
     const rng = mulberry32(99);
-    const count = 16;
+    const span = layout.endX - layout.startX + HEAD + TAIL;
+    // Density scales with the road length so far-out billboards still get sky cover,
+    // without thickening the cluster the player already sees on arrival.
+    const count = Math.max(16, Math.round(span / 22));
     // self-lit white so undersides never pick up the green ground bounce
     const cloudMat = new THREE.MeshStandardMaterial({
       color: "#ffffff",
@@ -27,22 +39,33 @@ export default function Clouds({ layout }: { layout: SceneLayout }) {
       roughness: 1,
     });
     const mesh = new THREE.InstancedMesh(makeCloudGeometry(), cloudMat, count);
-    const span = layout.endX - layout.startX;
     // Clouds must never cross a billboard face: they either drift well behind
     // the billboard line, or fly high enough to clear the tallest panel.
     const CLEARANCE = 18;
-    const base = Array.from({ length: count }, () => {
-      const behind = rng() < 0.65;
+    // One cloud per equal-width cell, jittered inside it: even coverage end to
+    // end (a plain uniform draw can luck into gaps, and averaging two draws —
+    // tried earlier — piles everything toward the middle of the range), while
+    // the per-cell jitter still keeps it from reading as a mechanical grid.
+    const totalSpan = layout.endX + TAIL - (layout.startX - HEAD);
+    const cellW = totalSpan / count;
+    const base = Array.from({ length: count }, (_, i) => {
+      const cellStart = layout.startX - HEAD + i * cellW;
+      const x = cellStart + rng() * cellW;
       const s = lerp(2.2, 5.5, rng());
-      const z = behind ? lerp(-260, BILL_Z - 45, rng()) : lerp(BILL_Z + 30, 60, rng());
-      const floor = behind ? 30 : maxTop + CLEARANCE + s * 1.4;
-      return {
-        x: lerp(layout.startX - 60, layout.startX + span * 0.85, Math.pow(rng(), 1.4)),
-        y: lerp(floor, floor + 34, rng()),
-        z,
-        s,
-        speed: lerp(0.4, 1.1, rng()),
-      };
+      let y: number, z: number;
+      if (x > layout.endX + 20) {
+        // Past the last billboard there's nothing to clear, so let clouds hang
+        // low — what the end-of-road view actually flies past — split evenly
+        // between both sides of the road rather than hovering right over it.
+        z = rng() < 0.5 ? lerp(-100, -40, rng()) : lerp(20, 80, rng());
+        y = lerp(12, 58, rng());
+      } else {
+        const behind = rng() < 0.65;
+        z = behind ? lerp(-260, BILL_Z - 45, rng()) : lerp(BILL_Z + 30, 60, rng());
+        const floor = behind ? 30 : maxTop + CLEARANCE + s * 1.4;
+        y = lerp(floor, floor + 34, rng());
+      }
+      return { x, y, z, s, speed: lerp(0.4, 1.1, rng()) };
     });
     mesh.castShadow = true;
     return { mesh, base };
@@ -60,10 +83,11 @@ export default function Clouds({ layout }: { layout: SceneLayout }) {
   const dummy = useMemo(() => new THREE.Object3D(), []);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
-    const span = layout.endX - layout.startX + 200;
+    const span = layout.endX - layout.startX + HEAD + TAIL;
     for (let i = 0; i < base.length; i++) {
       const b = base[i];
-      const x = layout.startX - 100 + (((b.x + b.speed * t - layout.startX + 100) % span) + span) % span;
+      const x =
+        layout.startX - HEAD + (((b.x + b.speed * t - layout.startX + HEAD) % span) + span) % span;
       dummy.position.set(x, b.y, b.z);
       dummy.scale.setScalar(b.s);
       dummy.updateMatrix();

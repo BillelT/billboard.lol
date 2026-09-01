@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import OgRenderClient from "./OgRenderClient";
 
 // Internal-only page: the OG image route headlessly screenshots this to get
@@ -6,6 +7,20 @@ import OgRenderClient from "./OgRenderClient";
 // so it's always rendered fresh from its query string, never prebuilt.
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { robots: { index: false, follow: false } };
+
+// robots.txt only asks well-behaved crawlers to skip this page — it doesn't
+// stop a person from just visiting the URL, and this page is also the debug
+// scene builder (?debug=1), so it must not be publicly browsable in
+// production. app/api/og/route.ts (the only legitimate caller in prod) signs
+// its request with this same secret via the `key` param.
+function isAuthorized(params: Record<string, string | undefined>): boolean {
+  if (process.env.NODE_ENV !== "production") return true;
+  const secret = process.env.OG_RENDER_SECRET;
+  // Fail open until the secret is actually configured on the deployment —
+  // an unset secret must never take the real OG image down with it.
+  if (!secret) return true;
+  return params.key === secret;
+}
 
 export default async function OgRenderPage({
   searchParams,
@@ -17,5 +32,6 @@ export default async function OgRenderPage({
   for (const [key, value] of Object.entries(sp)) {
     params[key] = Array.isArray(value) ? value[0] : value;
   }
+  if (!isAuthorized(params)) notFound();
   return <OgRenderClient params={params} />;
 }

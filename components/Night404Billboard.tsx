@@ -57,9 +57,7 @@ export default function Night404Billboard() {
       scale: [sx, sy, 1] as [number, number, number],
     };
   };
-  const webTopLeft = web(-PANEL_W / 2, top, 4.4);
   const webTopRight = web(PANEL_W / 2, top, 3.6, true);
-  const webLowerLeft = web(-PANEL_W / 2, POLE_H + 3.6, 4.8);
 
   const goHome = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -83,17 +81,9 @@ export default function Night404Billboard() {
         <meshBasicMaterial map={faceTex} toneMapped={false} />
       </mesh>
 
-      {/* cobwebs strung across the frame corners, in front of the structure */}
-      <mesh position={webTopLeft.position} scale={webTopLeft.scale}>
-        <planeGeometry args={[4.4, 4.4]} />
-        <meshBasicMaterial map={webTex} transparent depthWrite={false} toneMapped={false} />
-      </mesh>
+      {/* one cobweb strung across the top-right frame corner, in front of the structure */}
       <mesh position={webTopRight.position} scale={webTopRight.scale}>
         <planeGeometry args={[3.6, 3.6]} />
-        <meshBasicMaterial map={webTex} transparent depthWrite={false} toneMapped={false} />
-      </mesh>
-      <mesh position={webLowerLeft.position} scale={webLowerLeft.scale}>
-        <planeGeometry args={[4.8, 4.8]} />
         <meshBasicMaterial map={webTex} transparent depthWrite={false} toneMapped={false} />
       </mesh>
 
